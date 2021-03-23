@@ -1,0 +1,11 @@
+.vs 
+bin 
+obj 
+*.db3
+
+# React frontend
+SynologySlideshow.Web/node_modules/
+SynologySlideshow.Web/dist/
+
+# Development settings
+**/appsettings.Development.json

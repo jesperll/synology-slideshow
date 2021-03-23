@@ -1,0 +1,40 @@
+services:
+  synology-slideshow:
+    image: ghcr.io/jesperll/synology-slideshow:latest
+    container_name: synology-slideshow
+    restart: unless-stopped
+    
+    ports:
+      - "8080:8080"
+    
+    environment:
+      # Synology Configuration
+      - Synology__Uri=${SYNOLOGY_URI}
+      - Synology__Username=${SYNOLOGY_USERNAME}
+      - Synology__Password=${SYNOLOGY_PASSWORD}
+      
+      # ASP.NET Configuration
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      
+    # Optional: Volume for logs
+    volumes:
+      - ./logs:/app/logs
+    
+    # Optional: Healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/albums"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Optional: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M

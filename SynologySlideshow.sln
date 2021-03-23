@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11312.151 d18.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SynologySlideshow.Core", "SynologySlideshow.Core\SynologySlideshow.Core.csproj", "{FE83FD64-7613-42B2-B737-5E848712A045}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SynologySlideshow.Api", "SynologySlideshow.Api\SynologySlideshow.Api.csproj", "{66CDD4A4-BCCF-448A-ACE8-B3DF6D761506}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FE83FD64-7613-42B2-B737-5E848712A045}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE83FD64-7613-42B2-B737-5E848712A045}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE83FD64-7613-42B2-B737-5E848712A045}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE83FD64-7613-42B2-B737-5E848712A045}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66CDD4A4-BCCF-448A-ACE8-B3DF6D761506}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66CDD4A4-BCCF-448A-ACE8-B3DF6D761506}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66CDD4A4-BCCF-448A-ACE8-B3DF6D761506}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66CDD4A4-BCCF-448A-ACE8-B3DF6D761506}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1696697E-45AF-4D65-8B16-B176B242DAC0}
+	EndGlobalSection
+EndGlobal
