@@ -40,11 +40,18 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+// Serve static files from wwwroot (React build)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors(); // Enable CORS
 
 app.UseRouting();
 
 app.MapControllers();
+
+// Fallback to index.html for client-side routing
+app.MapFallbackToFile("index.html");
 
 // Initialize SlideShow service
 await app.Services.GetRequiredService<SlideShowService>().InitAsync();
