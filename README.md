@@ -31,7 +31,7 @@ mkdir synology-slideshow && cd synology-slideshow
 # Copy .env.server.example and rename to .env
 
 # 3. Edit .env file with your credentials
-SYNOLOGY_URI=https://your-synology-nas.local:5001
+SYNOLOGY_URI=https://your-synology-nas.local:5001/webapi
 SYNOLOGY_USERNAME=your_actual_username
 SYNOLOGY_PASSWORD=your_actual_password
 
@@ -51,7 +51,7 @@ docker build -f Dockerfile.production -t synology-slideshow .
 # Run the container
 docker run -d \
   -p 8080:8080 \
-  -e Synology__Uri=https://your-synology-nas.local:5001 \
+  -e Synology__Uri=https://your-synology-nas.local:5001/webapi \
   -e Synology__Username=your_username \
   -e Synology__Password=your_password \
   synology-slideshow
