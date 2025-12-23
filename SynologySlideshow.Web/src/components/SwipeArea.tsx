@@ -17,6 +17,7 @@ export function SwipeArea({ onSwipe, className, children }: SwipeAreaProps) {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
+      style={{ touchAction: 'pan-y', overscrollBehavior: 'none' }}
     >
       {children}
     </div>

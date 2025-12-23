@@ -6,6 +6,12 @@ html, body {
     background-color: black;
     color: white;
     user-select: none;
+    overscroll-behavior: none;
+    touch-action: pan-y;
+}
+
+html {
+    overflow: hidden;
 }
 
 a, .btn-link {
@@ -14,6 +20,12 @@ a, .btn-link {
 
 body {
     margin: 0;
+    overscroll-behavior-x: none;
+}
+
+#root {
+    touch-action: pan-y;
+    overscroll-behavior: none;
 }
 
 .full-screen {
