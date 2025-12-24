@@ -4,6 +4,7 @@ import { Album, Slide, SwipeDirection } from '../types';
 import { getAlbums, getAlbumSlides } from '../services/api';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
+import { useTabVisibility } from '../hooks/useTabVisibility';
 import { useSettings } from '../hooks/useSettings';
 import { SwipeArea } from './SwipeArea';
 import { Clock } from './Clock';
@@ -42,8 +43,11 @@ export function Home() {
   // Get slide speed in milliseconds from settings
   const slideSpeed = settings.slideshowSpeed * 1000;
 
-  // Initialize screen wake lock
-  useScreenWakeLock();
+  // Track tab visibility - slideshow should only advance when tab is active
+  const isTabVisible = useTabVisibility();
+
+  // Initialize screen wake lock (only when tab is visible)
+  useScreenWakeLock(isTabVisible);
 
   // Update document title when album name changes
   useEffect(() => {
@@ -94,14 +98,15 @@ export function Home() {
     loadAlbums();
   }, [albumId, location.pathname]);
 
-  // Manage slide timer based on pause state and speed setting
+  // Manage slide timer based on pause state, speed setting, and tab visibility
   useEffect(() => {
     if (slideTimerRef.current) {
       clearInterval(slideTimerRef.current);
       slideTimerRef.current = null;
     }
 
-    if (!isPaused && slides.length > 0) {
+    // Only advance slideshow when tab is visible, not paused, and slides exist
+    if (isTabVisible && !isPaused && slides.length > 0) {
       slideTimerRef.current = window.setInterval(() => {
         nextSlide(1);
       }, slideSpeed);
@@ -113,7 +118,7 @@ export function Home() {
         slideTimerRef.current = null;
       }
     };
-  }, [isPaused, slides, slideSpeed]);
+  }, [isTabVisible, isPaused, slides, slideSpeed]);
 
   const selectAlbum = async (album: Album, skipNavigation: boolean = false) => {
     try {
@@ -164,15 +169,15 @@ export function Home() {
       slideTimerRef.current = null;
     }
 
-    // Restart the timer if not paused
-    if (!isPaused && slides.length > 0) {
+    // Restart the timer if not paused and tab is visible
+    if (!isPaused && slides.length > 0 && isTabVisible) {
       slideTimerRef.current = window.setInterval(() => {
         nextSlide(1);
       }, slideSpeed);
     }
 
     setIsPaused(false);
-  }, [slides, currentSlide, isPaused, slideSpeed]);
+  }, [slides, currentSlide, isPaused, slideSpeed, isTabVisible]);
 
   const handleSwipe = (direction: SwipeDirection) => {
     switch (direction) {

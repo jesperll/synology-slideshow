@@ -9,3 +9,7 @@ SynologySlideshow.Web/dist/
 
 # Development settings
 **/appsettings.Development.json
+
+.env
+
+docker-compose.yml
