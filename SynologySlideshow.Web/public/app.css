@@ -236,6 +236,9 @@ body {
     text-shadow: 0 2px 2px rgba(0,0,0,0.5);
     z-index: 10;
     pointer-events: none;
+    max-width: 60%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .clock {
@@ -246,6 +249,7 @@ body {
     text-shadow: 0 2px 2px rgba(0,0,0,0.5);
     z-index: 10;
     pointer-events: none;
+    min-width: 20vh;
 }
 
     .clock > .time {
@@ -255,6 +259,21 @@ body {
     .clock > .date {
         font-size: 5vh;
     }
+
+/* Responsive styles for mobile devices */
+@media (max-width: 768px) {
+    .slide-info {
+        font-size: 2.5vh;
+        left: 3vh;
+        right: 3vh;
+        bottom: 3vh;
+        max-width: 100%;
+    }
+
+    .clock {
+        display: none;
+    }
+}
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
