@@ -182,10 +182,10 @@ export function Home() {
   const handleSwipe = (direction: SwipeDirection) => {
     switch (direction) {
       case SwipeDirection.LeftToRight:
-        nextSlide(1);
+        nextSlide(-1);
         break;
       case SwipeDirection.RightToLeft:
-        nextSlide(-1);
+        nextSlide(1);
         break;
       case SwipeDirection.TopToBottom:
         setIsPaused(true);
