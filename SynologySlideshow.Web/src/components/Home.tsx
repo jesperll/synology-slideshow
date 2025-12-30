@@ -39,6 +39,7 @@ export function Home() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   
   const slideTimerRef = useRef<number | null>(null);
+  const preloadedImagesRef = useRef<Set<string>>(new Set());
 
   // Get slide speed in milliseconds from settings
   const slideSpeed = settings.slideshowSpeed * 1000;
@@ -48,6 +49,27 @@ export function Home() {
 
   // Initialize screen wake lock (only when tab is visible)
   useScreenWakeLock(isTabVisible);
+
+  // Preload next image when current slide changes
+  useEffect(() => {
+    if (currentSlideIndex >= 0 && slides.length > 0) {
+      // Calculate next slide index
+      const nextIndex = (currentSlideIndex + 1) % slides.length;
+      const nextSlide = slides[nextIndex];
+      
+      // Preload the next image if not already preloaded
+      if (nextSlide && !preloadedImagesRef.current.has(nextSlide.uri)) {
+        const img = new Image();
+        img.src = nextSlide.uri;
+        img.onload = () => {
+          preloadedImagesRef.current.add(nextSlide.uri);
+        };
+        img.onerror = () => {
+          console.warn(`Failed to preload image: ${nextSlide.uri}`);
+        };
+      }
+    }
+  }, [currentSlideIndex, slides]);
 
   // Update document title when album name changes
   useEffect(() => {
@@ -131,6 +153,9 @@ export function Home() {
       setCurrentSlideIndex(-1);
       setCurrentSlide(null);
       setPreviousSlide(null);
+      
+      // Clear preloaded images cache when changing albums
+      preloadedImagesRef.current.clear();
       
       // Save selected album to localStorage
       localStorage.setItem(STORAGE_KEY, album.id.toString());
