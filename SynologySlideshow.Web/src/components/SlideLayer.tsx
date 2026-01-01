@@ -57,7 +57,7 @@ export function SlideLayer({
         <section
           className={`full-screen blurred-background ${animationClass} ${className}`}
           style={{ 
-            backgroundImage: `url('${slide.uri}')`,
+            backgroundImage: `url(${slide.uri})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
@@ -68,7 +68,7 @@ export function SlideLayer({
       <section
         className={`full-screen ${animationClass} ${kenBurnsClass} ${className}`}
         style={{
-          backgroundImage: `url('${slide.uri}')`,
+          backgroundImage: `url(${slide.uri})`,
           backgroundSize: zoomMode
         }}
       />

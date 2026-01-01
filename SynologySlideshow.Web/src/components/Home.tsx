@@ -40,6 +40,7 @@ export function Home() {
   
   const slideTimerRef = useRef<number | null>(null);
   const preloadedImagesRef = useRef<Set<string>>(new Set());
+  const imageObjectsRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Get slide speed in milliseconds from settings
   const slideSpeed = settings.slideshowSpeed * 1000;
@@ -50,24 +51,31 @@ export function Home() {
   // Initialize screen wake lock (only when tab is visible)
   useScreenWakeLock(isTabVisible);
 
-  // Preload next image when current slide changes
+  // Preload next few images when current slide changes
   useEffect(() => {
     if (currentSlideIndex >= 0 && slides.length > 0) {
-      // Calculate next slide index
-      const nextIndex = (currentSlideIndex + 1) % slides.length;
-      const nextSlide = slides[nextIndex];
+      // Preload current and next 2 images
+      const indicesToPreload = [
+        currentSlideIndex,
+        (currentSlideIndex + 1) % slides.length,
+        (currentSlideIndex + 2) % slides.length
+      ];
       
-      // Preload the next image if not already preloaded
-      if (nextSlide && !preloadedImagesRef.current.has(nextSlide.uri)) {
-        const img = new Image();
-        img.src = nextSlide.uri;
-        img.onload = () => {
-          preloadedImagesRef.current.add(nextSlide.uri);
-        };
-        img.onerror = () => {
-          console.warn(`Failed to preload image: ${nextSlide.uri}`);
-        };
-      }
+      indicesToPreload.forEach(index => {
+        const slide = slides[index];
+        if (slide && !preloadedImagesRef.current.has(slide.uri)) {
+          const img = new Image();
+          img.src = slide.uri;
+          img.onload = () => {
+            // Keep the Image object in memory to ensure browser caching
+            imageObjectsRef.current.set(slide.uri, img);
+            preloadedImagesRef.current.add(slide.uri);
+          };
+          img.onerror = () => {
+            console.warn(`Failed to preload image: ${slide.uri}`);
+          };
+        }
+      });
     }
   }, [currentSlideIndex, slides]);
 
@@ -154,6 +162,7 @@ export function Home() {
       setCurrentSlide(null);
       setPreviousSlide(null);
       
+      imageObjectsRef.current.clear();
       // Clear preloaded images cache when changing albums
       preloadedImagesRef.current.clear();
       
@@ -181,12 +190,34 @@ export function Home() {
   const nextSlide = useCallback((offset: number) => {
     if (slides.length === 0) return;
 
-    setCurrentSlideIndex((prevIndex) => {
-      const newIndex = (prevIndex + offset + slides.length) % slides.length;
+    const newIndex = (currentSlideIndex + offset + slides.length) % slides.length;
+    const nextSlideData = slides[newIndex];
+    
+    // Ensure the image is preloaded before displaying
+    if (nextSlideData && !preloadedImagesRef.current.has(nextSlideData.uri)) {
+      const img = new Image();
+      img.src = nextSlideData.uri;
+      img.onload = () => {
+        preloadedImagesRef.current.add(nextSlideData.uri);
+        imageObjectsRef.current.set(nextSlideData.uri, img);
+        // Update slides after image is loaded
+        setCurrentSlideIndex(newIndex);
+        setPreviousSlide(currentSlide);
+        setCurrentSlide(nextSlideData);
+      };
+      img.onerror = () => {
+        console.warn(`Failed to load image: ${nextSlideData.uri}`);
+        // Still show the slide even if it fails to load
+        setCurrentSlideIndex(newIndex);
+        setPreviousSlide(currentSlide);
+        setCurrentSlide(nextSlideData);
+      };
+    } else {
+      // Image already preloaded, show immediately
+      setCurrentSlideIndex(newIndex);
       setPreviousSlide(currentSlide);
-      setCurrentSlide(slides[newIndex]);
-      return newIndex;
-    });
+      setCurrentSlide(nextSlideData);
+    }
 
     // Reset the timer when manually navigating
     if (slideTimerRef.current) {
@@ -202,7 +233,7 @@ export function Home() {
     }
 
     setIsPaused(false);
-  }, [slides, currentSlide, isPaused, slideSpeed, isTabVisible]);
+  }, [slides, currentSlide, currentSlideIndex, isPaused, slideSpeed, isTabVisible]);
 
   const handleSwipe = (direction: SwipeDirection) => {
     switch (direction) {
