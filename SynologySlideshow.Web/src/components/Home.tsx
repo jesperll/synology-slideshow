@@ -190,34 +190,29 @@ export function Home() {
   const nextSlide = useCallback((offset: number) => {
     if (slides.length === 0) return;
 
-    const newIndex = (currentSlideIndex + offset + slides.length) % slides.length;
-    const nextSlideData = slides[newIndex];
-    
-    // Ensure the image is preloaded before displaying
-    if (nextSlideData && !preloadedImagesRef.current.has(nextSlideData.uri)) {
-      const img = new Image();
-      img.src = nextSlideData.uri;
-      img.onload = () => {
-        preloadedImagesRef.current.add(nextSlideData.uri);
-        imageObjectsRef.current.set(nextSlideData.uri, img);
-        // Update slides after image is loaded
-        setCurrentSlideIndex(newIndex);
-        setPreviousSlide(currentSlide);
-        setCurrentSlide(nextSlideData);
-      };
-      img.onerror = () => {
-        console.warn(`Failed to load image: ${nextSlideData.uri}`);
-        // Still show the slide even if it fails to load
-        setCurrentSlideIndex(newIndex);
-        setPreviousSlide(currentSlide);
-        setCurrentSlide(nextSlideData);
-      };
-    } else {
-      // Image already preloaded, show immediately
-      setCurrentSlideIndex(newIndex);
+    setCurrentSlideIndex((prevIndex) => {
+      const newIndex = (prevIndex + offset + slides.length) % slides.length;
+      const nextSlideData = slides[newIndex];
+      
+      // Ensure the image is preloaded before displaying
+      if (nextSlideData && !preloadedImagesRef.current.has(nextSlideData.uri)) {
+        const img = new Image();
+        img.src = nextSlideData.uri;
+        img.onload = () => {
+          preloadedImagesRef.current.add(nextSlideData.uri);
+          imageObjectsRef.current.set(nextSlideData.uri, img);
+        };
+        img.onerror = () => {
+          console.warn(`Failed to load image: ${nextSlideData.uri}`);
+        };
+      }
+      
+      // Always update slides immediately (whether preloaded or not)
       setPreviousSlide(currentSlide);
       setCurrentSlide(nextSlideData);
-    }
+      
+      return newIndex;
+    });
 
     // Reset the timer when manually navigating
     if (slideTimerRef.current) {
@@ -233,7 +228,7 @@ export function Home() {
     }
 
     setIsPaused(false);
-  }, [slides, currentSlide, currentSlideIndex, isPaused, slideSpeed, isTabVisible]);
+  }, [slides, currentSlide, isPaused, slideSpeed, isTabVisible]);
 
   const handleSwipe = (direction: SwipeDirection) => {
     switch (direction) {
