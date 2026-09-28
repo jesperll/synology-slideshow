@@ -37,6 +37,7 @@
 - Create: `SynologySlideshow.Api.Tests/Realtime/AdminPresenceTests.cs`
 - Modify: `SynologySlideshow.Api/Realtime/SlideshowHub.cs`
 - Modify: `SynologySlideshow.Api/Services/ChannelPlaybackService.cs`
+- Modify: `SynologySlideshow.Api/Controllers/ChannelsController.cs`
 - Modify: `SynologySlideshow.Api/Program.cs`
 
 **Interfaces:**
@@ -272,6 +273,34 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
         Assert.Contains(snapshot.Channels, c => c.ChannelId == channel.Id && c.ViewerCount == 0);
     }
 
+    [Fact]
+    public async Task AdminReceivesAPresenceUpdateWhenAChannelIsCreatedOverRest()
+    {
+        await _admin.InvokeAsync("JoinAdmin");
+        var updates = new List<AdminSnapshot>();
+        _admin.On<AdminSnapshot>("PresenceChanged", updates.Add);
+
+        var channel = await CreateChannelAsync("presence-created-over-rest-test");
+
+        await WaitUntilAsync(() => updates.Any(s => s.Channels.Any(c => c.ChannelId == channel.Id)), TimeSpan.FromSeconds(5));
+        Assert.Contains(updates, s => s.Channels.Any(c => c.ChannelId == channel.Id));
+    }
+
+    [Fact]
+    public async Task AdminReceivesAPresenceUpdateWhenAChannelIsDeletedOverRest()
+    {
+        var channel = await CreateChannelAsync("presence-deleted-over-rest-test");
+        await _admin.InvokeAsync("JoinAdmin");
+        var updates = new List<AdminSnapshot>();
+        _admin.On<AdminSnapshot>("PresenceChanged", updates.Add);
+
+        var client = _factory.CreateClient();
+        await client.DeleteAsync($"/api/channels/{channel.Id}");
+
+        await WaitUntilAsync(() => updates.Any(s => s.Channels.All(c => c.ChannelId != channel.Id)), TimeSpan.FromSeconds(5));
+        Assert.Contains(updates, s => s.Channels.All(c => c.ChannelId != channel.Id));
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
@@ -286,7 +315,7 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
 - [ ] **Step 6: Run the tests to verify they fail**
 
 Run: `dotnet test SynologySlideshow.Api.Tests --filter AdminPresenceTests`
-Expected: build FAILS — `AdminSnapshot`, `AdminSnapshotService`, `JoinAdmin`, and the presence-broadcast wiring don't exist yet.
+Expected: build FAILS — `AdminSnapshot`, `AdminSnapshotService`, `JoinAdmin`, and the presence-broadcast wiring (including on channel create/delete) don't exist yet.
 
 - [ ] **Step 7: Implement the snapshot type, service, and REST endpoint**
 
@@ -472,10 +501,108 @@ builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddScoped<AdminSnapshotService>();
 ```
 
+Finally, so a channel appearing or disappearing shows up live on an already-open admin page (not just on the next reload), replace `SynologySlideshow.Api/Controllers/ChannelsController.cs` in full:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using SynologySlideshow.Api.Data;
+using SynologySlideshow.Api.Realtime;
+using SynologySlideshow.Api.Services;
+
+namespace SynologySlideshow.Api.Controllers;
+
+[ApiController]
+[Route("api/channels")]
+public class ChannelsController : ControllerBase
+{
+    private static readonly string[] ReservedNames = { "ADMIN" };
+
+    private readonly SlideshowDbContext _db;
+    private readonly ChannelPlaybackService _playback;
+    private readonly IHubContext<SlideshowHub> _hubContext;
+    private readonly AdminSnapshotService _snapshotService;
+
+    public ChannelsController(
+        SlideshowDbContext db,
+        ChannelPlaybackService playback,
+        IHubContext<SlideshowHub> hubContext,
+        AdminSnapshotService snapshotService)
+    {
+        _db = db;
+        _playback = playback;
+        _hubContext = hubContext;
+        _snapshotService = snapshotService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> List()
+    {
+        var channels = await _db.Channels
+            .OrderBy(c => c.Name)
+            .Select(c => new ChannelSummary { Id = c.Id, Name = c.Name })
+            .ToListAsync();
+        return Ok(channels);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateChannelRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return BadRequest("Name is required.");
+
+        var name = request.Name.Trim();
+        var normalized = name.ToUpperInvariant();
+
+        if (ReservedNames.Contains(normalized))
+            return BadRequest($"'{name}' is a reserved name and can't be used for a channel.");
+
+        if (await _db.Channels.AnyAsync(c => c.NormalizedName == normalized))
+            return Conflict($"A channel named '{name}' already exists.");
+
+        var channel = new Channel { Name = name, NormalizedName = normalized };
+        _db.Channels.Add(channel);
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict($"A channel named '{name}' already exists.");
+        }
+
+        _playback.StartTimer(channel.Id);
+        await BroadcastPresenceAsync();
+        return CreatedAtAction(nameof(List), new ChannelSummary { Id = channel.Id, Name = channel.Name });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var channel = await _db.Channels.FindAsync(id);
+        if (channel == null) return NotFound();
+
+        _db.Channels.Remove(channel);
+        await _db.SaveChangesAsync();
+        _playback.StopTimer(id);
+        await BroadcastPresenceAsync();
+        return NoContent();
+    }
+
+    private async Task BroadcastPresenceAsync()
+    {
+        var snapshot = await _snapshotService.BuildAsync();
+        await _hubContext.Clients.Group(SlideshowHub.AdminGroupName).SendAsync("PresenceChanged", snapshot);
+    }
+}
+```
+
 - [ ] **Step 9: Run the tests to verify they pass**
 
 Run: `dotnet test SynologySlideshow.Api.Tests --filter AdminPresenceTests`
-Expected: PASS (4 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 10: Run the full backend test suite**
 
@@ -485,7 +612,7 @@ Expected: PASS (every test from this and both earlier plans).
 - [ ] **Step 11: Commit**
 
 ```bash
-git add SynologySlideshow.Api/Services/PresenceTracker.cs SynologySlideshow.Api/Realtime/AdminSnapshot.cs SynologySlideshow.Api/Services/AdminSnapshotService.cs SynologySlideshow.Api/Controllers/AdminController.cs SynologySlideshow.Api/Realtime/SlideshowHub.cs SynologySlideshow.Api/Services/ChannelPlaybackService.cs SynologySlideshow.Api/Program.cs SynologySlideshow.Api.Tests
+git add SynologySlideshow.Api/Services/PresenceTracker.cs SynologySlideshow.Api/Realtime/AdminSnapshot.cs SynologySlideshow.Api/Services/AdminSnapshotService.cs SynologySlideshow.Api/Controllers/AdminController.cs SynologySlideshow.Api/Controllers/ChannelsController.cs SynologySlideshow.Api/Realtime/SlideshowHub.cs SynologySlideshow.Api/Services/ChannelPlaybackService.cs SynologySlideshow.Api/Program.cs SynologySlideshow.Api.Tests
 git commit -m "feat: add presence tracking and the admin snapshot"
 ```
 

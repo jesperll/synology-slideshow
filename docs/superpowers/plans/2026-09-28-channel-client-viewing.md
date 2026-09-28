@@ -398,6 +398,8 @@ git commit -m "feat: add local-only channel redirect memory"
 - Create: `SynologySlideshow.Web/src/components/ChannelViewPresentation.test.tsx`
 - Create: `SynologySlideshow.Web/src/components/ChannelView.tsx`
 - Create: `SynologySlideshow.Web/src/components/ChannelView.test.tsx`
+- Create: `SynologySlideshow.Web/src/components/RootRoute.tsx`
+- Create: `SynologySlideshow.Web/src/components/RootRoute.test.tsx`
 - Modify: `SynologySlideshow.Web/src/components/OverlayMenu.tsx`
 - Modify: `SynologySlideshow.Web/src/App.tsx`
 
@@ -778,7 +780,56 @@ describe('ChannelView', () => {
 Run: `cd SynologySlideshow.Web && npm test -- ChannelView.test`
 Expected: FAIL — `./ChannelView` doesn't exist yet.
 
-- [ ] **Step 8: Implement `ChannelView` and add the route**
+- [ ] **Step 8: Write the failing `RootRoute` test**
+
+Create `SynologySlideshow.Web/src/components/RootRoute.test.tsx`:
+
+```tsx
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { RootRoute } from './RootRoute';
+import * as memory from '../services/channelMemory';
+
+vi.mock('../services/channelMemory');
+vi.mock('./Home', () => ({ Home: () => <div>anonymous home</div> }));
+
+describe('RootRoute', () => {
+  it('redirects to the remembered channel when one is stored', () => {
+    vi.mocked(memory.getRememberedChannel).mockReturnValue('kitchen');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/:channelName" element={<div>channel page</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('channel page')).toBeInTheDocument();
+  });
+
+  it('renders the anonymous Home when nothing is remembered', () => {
+    vi.mocked(memory.getRememberedChannel).mockReturnValue(null);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<RootRoute />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('anonymous home')).toBeInTheDocument();
+  });
+});
+```
+
+Run: `cd SynologySlideshow.Web && npm test -- RootRoute`
+Expected: FAIL — `./RootRoute` doesn't exist yet.
+
+- [ ] **Step 9: Implement `ChannelView`, `RootRoute`, and wire up the routes**
 
 Create `SynologySlideshow.Web/src/components/ChannelView.tsx`:
 
@@ -827,24 +878,33 @@ export function ChannelView() {
 }
 ```
 
-Modify `SynologySlideshow.Web/src/App.tsx`:
+Create `SynologySlideshow.Web/src/components/RootRoute.tsx`:
 
 ```tsx
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Home } from './components/Home';
-import { ChannelView } from './components/ChannelView';
-import { UpdateNotification } from './components/UpdateNotification';
-import { useVersionCheck } from './hooks/useVersionCheck';
-import { getRememberedChannel } from './services/channelMemory';
+import { Navigate } from 'react-router-dom';
+import { Home } from './Home';
+import { getRememberedChannel } from '../services/channelMemory';
 
-function RootRoute() {
+export function RootRoute() {
   const remembered = getRememberedChannel();
   if (remembered) {
     return <Navigate to={`/${remembered}`} replace />;
   }
   return <Home />;
 }
+```
+
+Modify `SynologySlideshow.Web/src/App.tsx`:
+
+```tsx
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { RootRoute } from './components/RootRoute';
+import { Home } from './components/Home';
+import { ChannelView } from './components/ChannelView';
+import { UpdateNotification } from './components/UpdateNotification';
+import { useVersionCheck } from './hooks/useVersionCheck';
 
 function App() {
   const { updateAvailable, reload, dismiss } = useVersionCheck();
@@ -865,20 +925,23 @@ function App() {
 export default App;
 ```
 
-- [ ] **Step 9: Run the test to verify it passes**
+- [ ] **Step 10: Run the tests to verify they pass**
 
 Run: `cd SynologySlideshow.Web && npm test -- ChannelView.test`
 Expected: PASS (2 tests).
 
-- [ ] **Step 10: Run the full frontend test suite and the production build**
+Run: `cd SynologySlideshow.Web && npm test -- RootRoute`
+Expected: PASS (2 tests).
+
+- [ ] **Step 11: Run the full frontend test suite and the production build**
 
 Run: `cd SynologySlideshow.Web && npm test && npm run build`
 Expected: all tests PASS; build succeeds (this also type-checks every file via `tsc`).
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 12: Commit**
 
 ```bash
-git add SynologySlideshow.Web/src/components/ChannelViewPresentation.tsx SynologySlideshow.Web/src/components/ChannelViewPresentation.test.tsx SynologySlideshow.Web/src/components/ChannelView.tsx SynologySlideshow.Web/src/components/ChannelView.test.tsx SynologySlideshow.Web/src/components/OverlayMenu.tsx SynologySlideshow.Web/src/App.tsx
+git add SynologySlideshow.Web/src/components/ChannelViewPresentation.tsx SynologySlideshow.Web/src/components/ChannelViewPresentation.test.tsx SynologySlideshow.Web/src/components/ChannelView.tsx SynologySlideshow.Web/src/components/ChannelView.test.tsx SynologySlideshow.Web/src/components/RootRoute.tsx SynologySlideshow.Web/src/components/RootRoute.test.tsx SynologySlideshow.Web/src/components/OverlayMenu.tsx SynologySlideshow.Web/src/App.tsx
 git commit -m "feat: add channel view route as a pure renderer of server-pushed state"
 ```
 
