@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SynologySlideshow.Api.Data;
 using SynologySlideshow.Api.Realtime;
 
@@ -25,14 +26,16 @@ public class ChannelPlaybackService
     private readonly ISlideSource _slideSource;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHubContext<SlideshowHub> _hubContext;
+    private readonly ILogger<ChannelPlaybackService> _logger;
     private readonly ConcurrentDictionary<int, ChannelRuntimeState> _runtime = new();
     private readonly ConcurrentDictionary<int, Timer> _timers = new();
 
-    public ChannelPlaybackService(ISlideSource slideSource, IServiceScopeFactory scopeFactory, IHubContext<SlideshowHub> hubContext)
+    public ChannelPlaybackService(ISlideSource slideSource, IServiceScopeFactory scopeFactory, IHubContext<SlideshowHub> hubContext, ILogger<ChannelPlaybackService> logger)
     {
         _slideSource = slideSource;
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
+        _logger = logger;
     }
 
     public async Task<ChannelStateDto> GetStateAsync(int channelId)
@@ -141,7 +144,19 @@ public class ChannelPlaybackService
         _runtime.TryRemove(channelId, out _);
     }
 
-    private void OnTick(object? state) => _ = TickAsync((int)state!);
+    private void OnTick(object? state) => _ = OnTickAsync((int)state!);
+
+    private async Task OnTickAsync(int channelId)
+    {
+        try
+        {
+            await TickAsync(channelId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to tick playback for channel {ChannelId}", channelId);
+        }
+    }
 
     private ChannelRuntimeState GetOrCreateRuntime(int channelId) =>
         _runtime.GetOrAdd(channelId, _ => new ChannelRuntimeState());

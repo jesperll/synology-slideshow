@@ -1,6 +1,8 @@
+using System.Reflection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SynologySlideshow.Api.Data;
 using SynologySlideshow.Api.Realtime;
 using SynologySlideshow.Api.Services;
@@ -15,6 +17,7 @@ public class ChannelPlaybackServiceTests : IDisposable
     private readonly ServiceProvider _provider;
     private readonly FakeHubContext _hub = new();
     private readonly FakeSlideSource _slides = new();
+    private readonly FakeLogger<ChannelPlaybackService> _logger = new();
     private readonly ChannelPlaybackService _playback;
     private readonly int _channelId;
 
@@ -29,7 +32,7 @@ public class ChannelPlaybackServiceTests : IDisposable
             scope.ServiceProvider.GetRequiredService<SlideshowDbContext>().Database.Migrate();
         }
 
-        _playback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub);
+        _playback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger);
 
         _slides.SlidesByAlbum[1] = new[] { new SlideRef(10), new SlideRef(20), new SlideRef(30) };
 
@@ -114,12 +117,38 @@ public class ChannelPlaybackServiceTests : IDisposable
     {
         await _playback.TogglePauseAsync(_channelId); // persist IsPaused = true
 
-        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub);
+        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger);
         _hub.Sent.Clear();
 
         await freshPlayback.TickAsync(_channelId);
 
         Assert.Empty(_hub.Sent); // still paused, a fresh in-process runtime must not lose that
+    }
+
+    [Fact]
+    public async Task TimerDrivenTickLogsAndSwallowsExceptionsInsteadOfCrashingTheTimer()
+    {
+        var throwingPlayback = new ChannelPlaybackService(new ThrowingSlideSource(), _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger);
+
+        // OnTick is the private callback the System.Threading.Timer invokes; drive it directly
+        // via reflection rather than waiting out the real 30s AdvanceInterval.
+        var onTick = typeof(ChannelPlaybackService).GetMethod("OnTick", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        onTick.Invoke(throwingPlayback, new object?[] { _channelId });
+
+        var deadline = DateTime.UtcNow.AddSeconds(2);
+        while (_logger.Entries.Count == 0 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+
+        var entry = Assert.Single(_logger.Entries);
+        Assert.Equal(LogLevel.Error, entry.LogLevel);
+        Assert.IsType<InvalidOperationException>(entry.Exception);
+    }
+
+    private class ThrowingSlideSource : ISlideSource
+    {
+        public SlideRef[] GetSlides(int albumId) => throw new InvalidOperationException("boom");
     }
 
     public void Dispose()
