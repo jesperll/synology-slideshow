@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SynologySlideshow.Api.Data;
+using SynologySlideshow.Api.Realtime;
 using SynologySlideshow.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -66,6 +67,7 @@ app.UseCors(); // Enable CORS
 app.UseRouting();
 
 app.MapControllers();
+app.MapHub<SlideshowHub>("/hub/slideshow");
 
 // Fallback to index.html for client-side routing
 app.MapFallbackToFile("index.html");
