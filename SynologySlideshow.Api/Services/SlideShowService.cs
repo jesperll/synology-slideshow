@@ -13,7 +13,7 @@ public class SlideShowService
         _options = options.Value;
     }
 
-    public async Task InitAsync()
+    public virtual async Task InitAsync()
     {
         var source = new SynologyAlbumSource(_options.Uri);
         await source.Login(_options.Username, _options.Password);
