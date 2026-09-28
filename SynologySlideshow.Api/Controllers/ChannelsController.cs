@@ -20,17 +20,23 @@ public class ChannelsController : ControllerBase
     private readonly ChannelPlaybackService _playback;
     private readonly IHubContext<SlideshowHub> _hubContext;
     private readonly AdminSnapshotService _snapshotService;
+    private readonly PresenceTracker _presence;
+    private readonly ILogger<ChannelsController> _logger;
 
     public ChannelsController(
         SlideshowDbContext db,
         ChannelPlaybackService playback,
         IHubContext<SlideshowHub> hubContext,
-        AdminSnapshotService snapshotService)
+        AdminSnapshotService snapshotService,
+        PresenceTracker presence,
+        ILogger<ChannelsController> logger)
     {
         _db = db;
         _playback = playback;
         _hubContext = hubContext;
         _snapshotService = snapshotService;
+        _presence = presence;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -86,14 +92,24 @@ public class ChannelsController : ControllerBase
 
         _db.Channels.Remove(channel);
         await _db.SaveChangesAsync();
+        _presence.RemoveChannel(id);
         _playback.StopTimer(id);
         await BroadcastPresenceAsync();
         return NoContent();
     }
 
+    // Best-effort: the mutation has already been saved, so a broadcast failure must not turn
+    // a successful create/delete into an error response.
     private async Task BroadcastPresenceAsync()
     {
-        var snapshot = await _snapshotService.BuildAsync();
-        await _hubContext.Clients.Group(SlideshowHub.AdminGroupName).SendAsync("PresenceChanged", snapshot);
+        try
+        {
+            var snapshot = await _snapshotService.BuildAsync();
+            await _hubContext.Clients.Group(SlideshowHub.AdminGroupName).SendAsync("PresenceChanged", snapshot);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast presence update to admins");
+        }
     }
 }

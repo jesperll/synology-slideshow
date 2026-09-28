@@ -13,13 +13,15 @@ public class SlideshowHub : Hub
     private readonly ChannelPlaybackService _playback;
     private readonly PresenceTracker _presence;
     private readonly AdminSnapshotService _snapshotService;
+    private readonly ILogger<SlideshowHub> _logger;
 
-    public SlideshowHub(SlideshowDbContext db, ChannelPlaybackService playback, PresenceTracker presence, AdminSnapshotService snapshotService)
+    public SlideshowHub(SlideshowDbContext db, ChannelPlaybackService playback, PresenceTracker presence, AdminSnapshotService snapshotService, ILogger<SlideshowHub> logger)
     {
         _db = db;
         _playback = playback;
         _presence = presence;
         _snapshotService = snapshotService;
+        _logger = logger;
     }
 
     public static string GroupName(int channelId) => $"channel:{channelId}";
@@ -74,9 +76,18 @@ public class SlideshowHub : Hub
 
     public Task<ChannelStateDto> RequestSwitchAlbum(int channelId, int albumId) => _playback.SetAlbumAsync(channelId, albumId);
 
+    // Presence broadcasts are best-effort: a failure here must never abort the caller's
+    // connect/disconnect/join/leave handling for an unrelated connection.
     private async Task BroadcastPresenceAsync()
     {
-        var snapshot = await _snapshotService.BuildAsync();
-        await Clients.Group(AdminGroupName).SendAsync("PresenceChanged", snapshot);
+        try
+        {
+            var snapshot = await _snapshotService.BuildAsync();
+            await Clients.Group(AdminGroupName).SendAsync("PresenceChanged", snapshot);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast presence update to admins");
+        }
     }
 }

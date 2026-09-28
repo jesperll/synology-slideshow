@@ -31,11 +31,13 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
         await _admin.DisposeAsync();
     }
 
-    private HubConnection BuildConnection() =>
+    private HubConnection BuildConnection() => BuildConnection(_factory);
+
+    private static HubConnection BuildConnection(SlideshowApiFactory factory) =>
         new HubConnectionBuilder()
-            .WithUrl(new Uri(_factory.Server.BaseAddress, "/hub/slideshow"), options =>
+            .WithUrl(new Uri(factory.Server.BaseAddress, "/hub/slideshow"), options =>
             {
-                options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+                options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
             })
             .Build();
 
@@ -99,7 +101,14 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
 
         await _viewer.DisposeAsync();
 
-        var snapshot = await _admin.InvokeAsync<AdminSnapshot>("JoinAdmin");
+        // The server's OnDisconnectedAsync runs asynchronously after the client disposes, so
+        // poll until it has been processed instead of asserting on the very next read.
+        AdminSnapshot snapshot = null!;
+        await WaitUntilAsync(async () =>
+        {
+            snapshot = await _admin.InvokeAsync<AdminSnapshot>("JoinAdmin");
+            return snapshot.Channels.Any(c => c.ChannelId == channel.Id && c.ViewerCount == 0);
+        }, TimeSpan.FromSeconds(5));
         Assert.Contains(snapshot.Channels, c => c.ChannelId == channel.Id && c.ViewerCount == 0);
     }
 
@@ -119,22 +128,64 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
     [Fact]
     public async Task AConnectionThatOnlyJoinsAdminIsNotCountedAsAnonymous()
     {
-        var probe = BuildConnection();
+        // Uses its own factory (and so its own server and PresenceTracker) rather than the
+        // shared class fixture, so a disconnect left over from another test in this class
+        // can't land between the reads below.
+        await using var isolatedFactory = new SlideshowApiFactory();
+        var observer = BuildConnection(isolatedFactory);
+        var probe = BuildConnection(isolatedFactory);
+        await observer.StartAsync();
         await probe.StartAsync();
         try
         {
-            // Both _admin and probe are still anonymous at this point (neither has joined admin yet).
-            var beforeProbeJoinsAdmin = await _admin.InvokeAsync<AdminSnapshot>("JoinAdmin");
+            // observer joins admin first; probe is then the only anonymous connection.
+            var beforeProbeJoinsAdmin = await observer.InvokeAsync<AdminSnapshot>("JoinAdmin");
+            Assert.Equal(1, beforeProbeJoinsAdmin.AnonymousCount);
 
             var afterProbeJoinsAdmin = await probe.InvokeAsync<AdminSnapshot>("JoinAdmin");
 
-            // Only the anonymous count for `probe` should disappear - the admin dashboard connecting
-            // to itself must not inflate the "N anonymous connected" number it displays.
-            Assert.Equal(beforeProbeJoinsAdmin.AnonymousCount - 1, afterProbeJoinsAdmin.AnonymousCount);
+            // The admin dashboard connecting to itself must not inflate the "N anonymous
+            // connected" number it displays.
+            Assert.Equal(0, afterProbeJoinsAdmin.AnonymousCount);
         }
         finally
         {
             await probe.DisposeAsync();
+            await observer.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeletingAChannelReturnsItsViewersToTheAnonymousCount()
+    {
+        // Isolated factory so the absolute anonymous counts below aren't affected by other tests.
+        await using var isolatedFactory = new SlideshowApiFactory();
+        var observer = BuildConnection(isolatedFactory);
+        var viewer = BuildConnection(isolatedFactory);
+        await observer.StartAsync();
+        await viewer.StartAsync();
+        try
+        {
+            await observer.InvokeAsync("JoinAdmin");
+            var client = isolatedFactory.CreateClient();
+            var response = await client.PostAsJsonAsync("/api/channels", new CreateChannelRequest { Name = "presence-delete-anon-test" });
+            var channel = (await response.Content.ReadFromJsonAsync<ChannelSummary>())!;
+            await viewer.InvokeAsync("JoinChannel", "presence-delete-anon-test");
+
+            var beforeDelete = await client.GetFromJsonAsync<AdminSnapshot>("/api/admin/snapshot");
+            Assert.Equal(0, beforeDelete!.AnonymousCount);
+            Assert.Contains(beforeDelete.Channels, c => c.ChannelId == channel.Id && c.ViewerCount == 1);
+
+            await client.DeleteAsync($"/api/channels/{channel.Id}");
+
+            var afterDelete = await client.GetFromJsonAsync<AdminSnapshot>("/api/admin/snapshot");
+            Assert.DoesNotContain(afterDelete!.Channels, c => c.ChannelId == channel.Id);
+            Assert.Equal(1, afterDelete.AnonymousCount);
+        }
+        finally
+        {
+            await viewer.DisposeAsync();
+            await observer.DisposeAsync();
         }
     }
 
@@ -157,6 +208,15 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
     {
         var deadline = DateTime.UtcNow + timeout;
         while (!condition() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50);
+        }
+    }
+
+    private static async Task WaitUntilAsync(Func<Task<bool>> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (!await condition() && DateTime.UtcNow < deadline)
         {
             await Task.Delay(50);
         }

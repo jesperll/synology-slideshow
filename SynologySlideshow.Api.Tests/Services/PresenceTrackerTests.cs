@@ -92,4 +92,60 @@ public class PresenceTrackerTests
 
         Assert.Equal(0, tracker.GetAnonymousCount());
     }
+    [Fact]
+    public void LeavingWithAMismatchedChannelIdDoesNotCorruptAnyCount()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnConnected();
+        tracker.OnConnected();
+        tracker.OnJoinedChannel("A", channelId: 1);
+        tracker.OnJoinedChannel("B", channelId: 2);
+
+        tracker.OnLeftChannel("B", channelId: 1); // B is actually on channel 2
+
+        Assert.Equal(1, tracker.GetViewerCount(1));
+        Assert.Equal(1, tracker.GetViewerCount(2));
+        Assert.Equal(0, tracker.GetAnonymousCount());
+
+        // B's real mapping survived, so a later disconnect still decrements channel 2.
+        tracker.OnDisconnected("B");
+        Assert.Equal(0, tracker.GetViewerCount(2));
+        Assert.Equal(1, tracker.GetViewerCount(1));
+    }
+
+    [Fact]
+    public void RemovingAChannelReturnsItsViewersToAnonymous()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnConnected();
+        tracker.OnConnected();
+        tracker.OnConnected();
+        tracker.OnJoinedChannel("A", channelId: 1);
+        tracker.OnJoinedChannel("B", channelId: 1);
+        tracker.OnJoinedChannel("C", channelId: 2);
+
+        tracker.RemoveChannel(1);
+
+        Assert.Equal(0, tracker.GetViewerCount(1));
+        Assert.Equal(1, tracker.GetViewerCount(2));
+        Assert.Equal(2, tracker.GetAnonymousCount());
+    }
+
+    [Fact]
+    public void ViewersOfARemovedChannelCanDisconnectOrRejoinWithoutCorruptingCounts()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnConnected();
+        tracker.OnConnected();
+        tracker.OnJoinedChannel("A", channelId: 1);
+        tracker.OnJoinedChannel("B", channelId: 1);
+        tracker.RemoveChannel(1);
+
+        tracker.OnDisconnected("A");
+        tracker.OnJoinedChannel("B", channelId: 2);
+
+        Assert.Equal(0, tracker.GetViewerCount(1));
+        Assert.Equal(1, tracker.GetViewerCount(2));
+        Assert.Equal(0, tracker.GetAnonymousCount());
+    }
 }

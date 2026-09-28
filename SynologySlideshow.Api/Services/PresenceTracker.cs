@@ -34,9 +34,30 @@ public class PresenceTracker
 
     public void OnLeftChannel(string connectionId, int channelId)
     {
-        if (_connectionChannel.TryRemove(connectionId, out _))
+        // Only leave if the connection is actually tracked on this channel: a mismatched
+        // channelId must neither drop the connection's real mapping nor decrement an
+        // unrelated channel's count. The KeyValuePair overload removes atomically only
+        // when the stored value still matches.
+        if (_connectionChannel.TryRemove(new KeyValuePair<string, int>(connectionId, channelId)))
         {
             _viewerCounts.AddOrUpdate(channelId, 0, (_, count) => Math.Max(0, count - 1));
+        }
+    }
+
+    // Forgets a deleted channel: its viewer count goes away and its viewers' connections
+    // are no longer mapped to it, so they count as anonymous again instead of being
+    // attributed to a channel the admin snapshot will never list.
+    public void RemoveChannel(int channelId)
+    {
+        _viewerCounts.TryRemove(channelId, out _);
+        foreach (var entry in _connectionChannel)
+        {
+            if (entry.Value == channelId)
+            {
+                // Value-matched removal so a connection that concurrently moved to another
+                // channel keeps its new mapping.
+                _connectionChannel.TryRemove(entry);
+            }
         }
     }
 
