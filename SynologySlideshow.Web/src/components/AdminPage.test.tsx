@@ -214,6 +214,28 @@ describe('AdminPage', () => {
     expect(screen.getAllByRole('checkbox')[1]).toBeChecked();
   });
 
+  it("shows a linked channel's name (not just its id) in the Linked with column", () => {
+    const linkedSnapshot: AdminSnapshot = {
+      anonymousCount: 0,
+      channels: [
+        { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [2] },
+        { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [1] }
+      ]
+    };
+    mockHook({ snapshot: linkedSnapshot });
+
+    const { container } = render(<AdminPage />);
+
+    const rows = container.querySelectorAll('tbody > tr');
+    const kitchenLinkedCell = rows[0].querySelectorAll('td')[6];
+    const livingRoomLinkedCell = rows[1].querySelectorAll('td')[6];
+
+    expect(kitchenLinkedCell.textContent).toContain('living-room');
+    expect(kitchenLinkedCell.textContent).not.toContain('#2');
+    expect(livingRoomLinkedCell.textContent).toContain('kitchen');
+    expect(livingRoomLinkedCell.textContent).not.toContain('#1');
+  });
+
   it('unlinks a channel through its row button', () => {
     const requestUnlink = vi.fn();
     const linkedSnapshot: AdminSnapshot = {

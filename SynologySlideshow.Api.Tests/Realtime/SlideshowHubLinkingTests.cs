@@ -111,6 +111,52 @@ public class SlideshowHubLinkingTests : IClassFixture<SlideshowApiFactory>, IAsy
         Assert.Equal(new[] { survivor.Id }, playback.GetGroupMembers(survivor.Id).ToArray());
     }
 
+    [Fact]
+    public async Task LinkingChannelsBroadcastsAPresenceUpdateWithTheLinkedIds()
+    {
+        var channelA = await CreateChannelAsync("link-presence-a");
+        var channelB = await CreateChannelAsync("link-presence-b");
+        await _connectionB.InvokeAsync("JoinAdmin");
+
+        var updates = new List<AdminSnapshot>();
+        _connectionB.On<AdminSnapshot>("PresenceChanged", updates.Add);
+
+        var linkResult = await _connectionA.InvokeAsync<LinkResult>("RequestLinkChannels", new[] { channelA.Id, channelB.Id });
+        Assert.True(linkResult.Success);
+
+        await WaitUntilAsync(() => updates.Any(s =>
+            s.Channels.Any(c => c.ChannelId == channelA.Id && c.LinkedChannelIds.Contains(channelB.Id)) &&
+            s.Channels.Any(c => c.ChannelId == channelB.Id && c.LinkedChannelIds.Contains(channelA.Id))),
+            TimeSpan.FromSeconds(5));
+
+        Assert.Contains(updates, s =>
+            s.Channels.Any(c => c.ChannelId == channelA.Id && c.LinkedChannelIds.Contains(channelB.Id)) &&
+            s.Channels.Any(c => c.ChannelId == channelB.Id && c.LinkedChannelIds.Contains(channelA.Id)));
+    }
+
+    [Fact]
+    public async Task UnlinkingChannelsBroadcastsAPresenceUpdateWithEmptyLinkedIds()
+    {
+        var channelA = await CreateChannelAsync("unlink-presence-a");
+        var channelB = await CreateChannelAsync("unlink-presence-b");
+        await _connectionA.InvokeAsync<LinkResult>("RequestLinkChannels", new[] { channelA.Id, channelB.Id });
+
+        await _connectionB.InvokeAsync("JoinAdmin");
+        var updates = new List<AdminSnapshot>();
+        _connectionB.On<AdminSnapshot>("PresenceChanged", updates.Add);
+
+        await _connectionA.InvokeAsync("RequestUnlinkChannel", channelA.Id);
+
+        await WaitUntilAsync(() => updates.Any(s =>
+            s.Channels.Any(c => c.ChannelId == channelA.Id && c.LinkedChannelIds.Length == 0) &&
+            s.Channels.Any(c => c.ChannelId == channelB.Id && c.LinkedChannelIds.Length == 0)),
+            TimeSpan.FromSeconds(5));
+
+        Assert.Contains(updates, s =>
+            s.Channels.Any(c => c.ChannelId == channelA.Id && c.LinkedChannelIds.Length == 0) &&
+            s.Channels.Any(c => c.ChannelId == channelB.Id && c.LinkedChannelIds.Length == 0));
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
