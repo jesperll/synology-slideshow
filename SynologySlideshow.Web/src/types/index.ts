@@ -31,3 +31,16 @@ export interface AppSettings {
   kenBurnsEffect: boolean;
   slideshowSpeed: number; // in seconds
 }
+
+export interface ChannelState {
+  channelId: number;
+  name: string;
+  currentAlbumId: number | null;
+  currentSlideId: number | null;
+  isPaused: boolean;
+}
+
+export interface ChannelSummary {
+  id: number;
+  name: string;
+}
