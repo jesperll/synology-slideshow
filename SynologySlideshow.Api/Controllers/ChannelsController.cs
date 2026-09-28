@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SynologySlideshow.Api.Data;
+using SynologySlideshow.Api.Services;
 
 namespace SynologySlideshow.Api.Controllers;
 
@@ -11,10 +12,12 @@ public class ChannelsController : ControllerBase
     private static readonly string[] ReservedNames = { "ADMIN" };
 
     private readonly SlideshowDbContext _db;
+    private readonly ChannelPlaybackService _playback;
 
-    public ChannelsController(SlideshowDbContext db)
+    public ChannelsController(SlideshowDbContext db, ChannelPlaybackService playback)
     {
         _db = db;
+        _playback = playback;
     }
 
     [HttpGet]
@@ -54,6 +57,7 @@ public class ChannelsController : ControllerBase
             return Conflict($"A channel named '{name}' already exists.");
         }
 
+        _playback.StartTimer(channel.Id);
         return CreatedAtAction(nameof(List), new ChannelSummary { Id = channel.Id, Name = channel.Name });
     }
 
@@ -65,6 +69,7 @@ public class ChannelsController : ControllerBase
 
         _db.Channels.Remove(channel);
         await _db.SaveChangesAsync();
+        _playback.StopTimer(id);
         return NoContent();
     }
 }

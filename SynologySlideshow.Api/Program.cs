@@ -39,6 +39,11 @@ Directory.CreateDirectory("data");
 builder.Services.AddDbContext<SlideshowDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Slideshow") ?? "Data Source=data/slideshow.db"));
 
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ISlideSource, SlideShowSlideSource>();
+builder.Services.AddSingleton<ChannelPlaybackService>();
+builder.Services.AddHostedService<ChannelTimerStartup>();
+
 var app = builder.Build();
 
 using (var migrationScope = app.Services.CreateScope())
