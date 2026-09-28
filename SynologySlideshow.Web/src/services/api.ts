@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Album, Slide } from '../types';
+import { Album, ChannelSummary, Slide } from '../types';
 
 const api = axios.create({
   baseURL: '/api'
@@ -7,5 +7,7 @@ const api = axios.create({
 
 export const getAlbums = () => api.get<Album[]>('/albums');
 
-export const getAlbumSlides = (albumId: number) => 
+export const getAlbumSlides = (albumId: number) =>
   api.get<Slide[]>(`/albums/${albumId}/slides`);
+
+export const getChannels = () => api.get<ChannelSummary[]>('/channels');

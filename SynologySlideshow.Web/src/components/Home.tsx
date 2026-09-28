@@ -11,6 +11,7 @@ import { Clock } from './Clock';
 import { SlideInfo } from './SlideInfo';
 import { SlideLayer } from './SlideLayer';
 import { OverlayMenu } from './OverlayMenu';
+import { JoinChannelPicker } from './JoinChannelPicker';
 
 const STORAGE_KEY = 'synology-slideshow-selected-album-id';
 
@@ -308,6 +309,7 @@ export function Home() {
           onSelectAlbum={(album) => selectAlbum(album, false)}
           onSettingsChange={updateSettings}
           onClose={() => setIsPaused(false)}
+          settingsFooter={<JoinChannelPicker />}
         />
       )}
     </SwipeArea>
