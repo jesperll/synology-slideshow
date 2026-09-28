@@ -58,6 +58,17 @@ public class SlideshowHubTests : IClassFixture<SlideshowApiFactory>, IAsyncLifet
     }
 
     [Fact]
+    public async Task JoiningIgnoresCasingAndSurroundingWhitespace()
+    {
+        var channel = await CreateChannelAsync("Hub-Case-Test");
+
+        var state = await _connectionA.InvokeAsync<ChannelStateDto?>("JoinChannel", "  hub-CASE-test ");
+
+        Assert.NotNull(state);
+        Assert.Equal(channel.Id, state!.ChannelId);
+    }
+
+    [Fact]
     public async Task JoiningAnUnknownChannelReturnsNull()
     {
         var state = await _connectionA.InvokeAsync<ChannelStateDto?>("JoinChannel", "does-not-exist");

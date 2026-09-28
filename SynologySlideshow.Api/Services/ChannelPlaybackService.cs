@@ -14,11 +14,6 @@ public class ChannelNotFoundException : Exception
     }
 }
 
-internal class ChannelRuntimeState
-{
-    public int? CurrentSlideIndex;
-}
-
 public class ChannelPlaybackService
 {
     private static readonly TimeSpan AdvanceInterval = TimeSpan.FromSeconds(30);
@@ -27,7 +22,6 @@ public class ChannelPlaybackService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHubContext<SlideshowHub> _hubContext;
     private readonly ILogger<ChannelPlaybackService> _logger;
-    private readonly ConcurrentDictionary<int, ChannelRuntimeState> _runtime = new();
     private readonly ConcurrentDictionary<int, Timer> _timers = new();
 
     public ChannelPlaybackService(ISlideSource slideSource, IServiceScopeFactory scopeFactory, IHubContext<SlideshowHub> hubContext, ILogger<ChannelPlaybackService> logger)
@@ -44,7 +38,7 @@ public class ChannelPlaybackService
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
         var channel = await db.Channels.FindAsync(channelId) ?? throw new ChannelNotFoundException(channelId);
 
-        return ToDto(channel, GetOrCreateRuntime(channelId));
+        return ToDto(channel);
     }
 
     public async Task<ChannelStateDto> AdvanceAsync(int channelId, int offset)
@@ -53,15 +47,18 @@ public class ChannelPlaybackService
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
         var channel = await db.Channels.FindAsync(channelId) ?? throw new ChannelNotFoundException(channelId);
 
-        var runtime = GetOrCreateRuntime(channelId);
         var slides = GetSlides(channel.CurrentAlbumId);
         if (slides.Length > 0)
         {
-            var current = runtime.CurrentSlideIndex ?? -1;
-            runtime.CurrentSlideIndex = ((current + offset) % slides.Length + slides.Length) % slides.Length;
+            var current = CurrentSlideIndex(channel, slides);
+            var next = ((current + offset) % slides.Length + slides.Length) % slides.Length;
+            channel.CurrentSlideId = slides[next].Id;
+            await db.SaveChangesAsync();
         }
 
-        return await BuildAndBroadcastAsync(channel, runtime);
+        var dto = await BuildAndBroadcastAsync(channel);
+        ResetTimer(channelId);
+        return dto;
     }
 
     public async Task<ChannelStateDto> JumpAsync(int channelId, int slideId)
@@ -70,15 +67,16 @@ public class ChannelPlaybackService
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
         var channel = await db.Channels.FindAsync(channelId) ?? throw new ChannelNotFoundException(channelId);
 
-        var runtime = GetOrCreateRuntime(channelId);
         var slides = GetSlides(channel.CurrentAlbumId);
-        var index = Array.FindIndex(slides, s => s.Id == slideId);
-        if (index >= 0)
+        if (Array.FindIndex(slides, s => s.Id == slideId) >= 0)
         {
-            runtime.CurrentSlideIndex = index;
+            channel.CurrentSlideId = slideId;
+            await db.SaveChangesAsync();
         }
 
-        return await BuildAndBroadcastAsync(channel, runtime);
+        var dto = await BuildAndBroadcastAsync(channel);
+        ResetTimer(channelId);
+        return dto;
     }
 
     public async Task<ChannelStateDto> TogglePauseAsync(int channelId)
@@ -90,7 +88,9 @@ public class ChannelPlaybackService
         channel.IsPaused = !channel.IsPaused;
         await db.SaveChangesAsync();
 
-        return await BuildAndBroadcastAsync(channel, GetOrCreateRuntime(channelId));
+        var dto = await BuildAndBroadcastAsync(channel);
+        ResetTimer(channelId);
+        return dto;
     }
 
     public async Task<ChannelStateDto> SetAlbumAsync(int channelId, int albumId)
@@ -99,13 +99,14 @@ public class ChannelPlaybackService
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
         var channel = await db.Channels.FindAsync(channelId) ?? throw new ChannelNotFoundException(channelId);
 
+        var slides = GetSlides(albumId);
         channel.CurrentAlbumId = albumId;
+        channel.CurrentSlideId = slides.Length > 0 ? slides[0].Id : null;
         await db.SaveChangesAsync();
 
-        var runtime = GetOrCreateRuntime(channelId);
-        runtime.CurrentSlideIndex = null;
-
-        return await BuildAndBroadcastAsync(channel, runtime);
+        var dto = await BuildAndBroadcastAsync(channel);
+        ResetTimer(channelId);
+        return dto;
     }
 
     public async Task TickAsync(int channelId)
@@ -120,14 +121,14 @@ public class ChannelPlaybackService
         }
         if (channel.IsPaused) return;
 
-        var runtime = GetOrCreateRuntime(channelId);
         var slides = GetSlides(channel.CurrentAlbumId);
         if (slides.Length == 0) return;
 
-        var current = runtime.CurrentSlideIndex ?? -1;
-        runtime.CurrentSlideIndex = (current + 1 + slides.Length) % slides.Length;
+        var current = CurrentSlideIndex(channel, slides);
+        channel.CurrentSlideId = slides[(current + 1 + slides.Length) % slides.Length].Id;
+        await db.SaveChangesAsync();
 
-        await BuildAndBroadcastAsync(channel, runtime);
+        await BuildAndBroadcastAsync(channel);
     }
 
     public void StartTimer(int channelId)
@@ -141,7 +142,14 @@ public class ChannelPlaybackService
         {
             timer.Dispose();
         }
-        _runtime.TryRemove(channelId, out _);
+    }
+
+    public void ResetTimer(int channelId)
+    {
+        if (_timers.TryGetValue(channelId, out var timer))
+        {
+            timer.Change(AdvanceInterval, AdvanceInterval);
+        }
     }
 
     private void OnTick(object? state) => _ = OnTickAsync((int)state!);
@@ -158,33 +166,26 @@ public class ChannelPlaybackService
         }
     }
 
-    private ChannelRuntimeState GetOrCreateRuntime(int channelId) =>
-        _runtime.GetOrAdd(channelId, _ => new ChannelRuntimeState());
-
     private SlideRef[] GetSlides(int? albumId) =>
         albumId is int id ? _slideSource.GetSlides(id) : Array.Empty<SlideRef>();
 
-    private async Task<ChannelStateDto> BuildAndBroadcastAsync(Channel channel, ChannelRuntimeState runtime)
+    // -1 when there is no current slide (or it's no longer in the album), so the next advance lands on the first slide.
+    private static int CurrentSlideIndex(Channel channel, SlideRef[] slides) =>
+        Array.FindIndex(slides, s => s.Id == channel.CurrentSlideId);
+
+    private async Task<ChannelStateDto> BuildAndBroadcastAsync(Channel channel)
     {
-        var dto = ToDto(channel, runtime);
+        var dto = ToDto(channel);
         await _hubContext.Clients.Group(SlideshowHub.GroupName(channel.Id)).SendAsync("ChannelStateChanged", dto);
         return dto;
     }
 
-    private ChannelStateDto ToDto(Channel channel, ChannelRuntimeState runtime)
+    private static ChannelStateDto ToDto(Channel channel) => new()
     {
-        var slides = GetSlides(channel.CurrentAlbumId);
-        int? currentSlideId = runtime.CurrentSlideIndex is int index && index >= 0 && index < slides.Length
-            ? slides[index].Id
-            : null;
-
-        return new ChannelStateDto
-        {
-            ChannelId = channel.Id,
-            Name = channel.Name,
-            CurrentAlbumId = channel.CurrentAlbumId,
-            CurrentSlideId = currentSlideId,
-            IsPaused = channel.IsPaused
-        };
-    }
+        ChannelId = channel.Id,
+        Name = channel.Name,
+        CurrentAlbumId = channel.CurrentAlbumId,
+        CurrentSlideId = channel.CurrentSlideId,
+        IsPaused = channel.IsPaused
+    };
 }

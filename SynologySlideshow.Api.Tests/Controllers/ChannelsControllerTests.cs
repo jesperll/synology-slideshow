@@ -53,6 +53,33 @@ public class ChannelsControllerTests : IClassFixture<SlideshowApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("living/room")]
+    [InlineData("what?")]
+    [InlineData("room#1")]
+    public async Task CreateWithUnsafeCharactersReturnsBadRequest(string name)
+    {
+        var response = await _client.PostAsJsonAsync("/api/channels", new CreateChannelRequest { Name = name });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateWithNameLongerThan64CharactersReturnsBadRequest()
+    {
+        var response = await _client.PostAsJsonAsync("/api/channels", new CreateChannelRequest { Name = new string('a', 65) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateAllowsAccentedLettersHyphensAndSpaces()
+    {
+        var response = await _client.PostAsJsonAsync("/api/channels", new CreateChannelRequest { Name = "café-room 2" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
     [Fact]
     public async Task DeleteRemovesTheChannel()
     {

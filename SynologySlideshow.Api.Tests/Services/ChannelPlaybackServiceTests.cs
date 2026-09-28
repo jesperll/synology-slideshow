@@ -85,6 +85,69 @@ public class ChannelPlaybackServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SwitchingToAnAlbumWithSlidesShowsItsFirstSlideImmediately()
+    {
+        _slides.SlidesByAlbum[2] = new[] { new SlideRef(40), new SlideRef(50) };
+
+        var state = await _playback.SetAlbumAsync(_channelId, albumId: 2);
+
+        Assert.Equal(2, state.CurrentAlbumId);
+        Assert.Equal(40, state.CurrentSlideId);
+    }
+
+    [Fact]
+    public async Task CurrentSlideSurvivesAFreshServiceInstanceOverTheSameDatabase()
+    {
+        await _playback.JumpAsync(_channelId, 20);
+
+        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger);
+
+        var state = await freshPlayback.GetStateAsync(_channelId);
+        Assert.Equal(20, state.CurrentSlideId);
+
+        var advanced = await freshPlayback.AdvanceAsync(_channelId, 1);
+        Assert.Equal(30, advanced.CurrentSlideId);
+    }
+
+    [Fact]
+    public async Task JumpToUnknownSlideLeavesCurrentSlideUnchanged()
+    {
+        await _playback.JumpAsync(_channelId, 20);
+
+        var state = await _playback.JumpAsync(_channelId, 12345);
+
+        Assert.Equal(20, state.CurrentSlideId);
+    }
+
+    [Fact]
+    public async Task ManualNavigationWithARunningTimerResetsItWithoutDisturbingPlayback()
+    {
+        _playback.StartTimer(_channelId);
+        try
+        {
+            var advanced = await _playback.AdvanceAsync(_channelId, 1);
+            Assert.Equal(10, advanced.CurrentSlideId);
+
+            // a tick right after a (timer-resetting) manual advance still moves exactly one slide
+            await _playback.TickAsync(_channelId);
+            var state = await _playback.GetStateAsync(_channelId);
+            Assert.Equal(20, state.CurrentSlideId);
+
+            _playback.ResetTimer(_channelId);
+        }
+        finally
+        {
+            _playback.StopTimer(_channelId);
+        }
+    }
+
+    [Fact]
+    public void ResetTimerOnAChannelWithoutATimerIsANoOp()
+    {
+        _playback.ResetTimer(999999);
+    }
+
+    [Fact]
     public async Task EveryMutationBroadcastsToTheChannelGroup()
     {
         await _playback.AdvanceAsync(_channelId, 1);

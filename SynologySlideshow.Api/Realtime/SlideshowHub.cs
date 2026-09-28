@@ -20,7 +20,8 @@ public class SlideshowHub : Hub
 
     public async Task<ChannelStateDto?> JoinChannel(string channelName)
     {
-        var channel = await _db.Channels.SingleOrDefaultAsync(c => c.Name == channelName);
+        var normalized = channelName.Trim().ToUpperInvariant();
+        var channel = await _db.Channels.SingleOrDefaultAsync(c => c.NormalizedName == normalized);
         if (channel == null) return null;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(channel.Id));

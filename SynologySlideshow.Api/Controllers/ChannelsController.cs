@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SynologySlideshow.Api.Data;
@@ -10,6 +11,8 @@ namespace SynologySlideshow.Api.Controllers;
 public class ChannelsController : ControllerBase
 {
     private static readonly string[] ReservedNames = { "ADMIN" };
+    // Channel names become a single URL path segment, so only allow characters that are safe there.
+    private static readonly Regex ValidName = new(@"^[\p{L}\p{N} _-]{1,64}$", RegexOptions.Compiled);
 
     private readonly SlideshowDbContext _db;
     private readonly ChannelPlaybackService _playback;
@@ -38,6 +41,9 @@ public class ChannelsController : ControllerBase
 
         var name = request.Name.Trim();
         var normalized = name.ToUpperInvariant();
+
+        if (!ValidName.IsMatch(name))
+            return BadRequest("Name must be 1-64 characters and contain only letters, digits, spaces, underscores and hyphens.");
 
         if (ReservedNames.Contains(normalized))
             return BadRequest($"'{name}' is a reserved name and can't be used for a channel.");
