@@ -44,3 +44,17 @@ export interface ChannelSummary {
   id: number;
   name: string;
 }
+
+export interface AdminChannelEntry {
+  channelId: number;
+  name: string;
+  currentAlbumId: number | null;
+  currentSlideId: number | null;
+  isPaused: boolean;
+  viewerCount: number;
+}
+
+export interface AdminSnapshot {
+  anonymousCount: number;
+  channels: AdminChannelEntry[];
+}
