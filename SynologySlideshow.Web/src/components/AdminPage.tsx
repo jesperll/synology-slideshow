@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAdminConnection } from '../hooks/useAdminConnection';
 import { createChannel, deleteChannel, getAlbums, getAlbumSlides } from '../services/api';
 import { Album, Slide } from '../types';
@@ -11,6 +11,9 @@ export function AdminPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [slidesByAlbum, setSlidesByAlbum] = useState<Record<number, Slide[]>>({});
   const [expandedChannelId, setExpandedChannelId] = useState<number | null>(null);
+  // Albums whose slides have been requested (loaded or in flight), so the eager
+  // current-slide loading and the jump grid never fetch the same album twice.
+  const requestedAlbumsRef = useRef(new Set<number>());
 
   useEffect(() => {
     getAlbums().then((response) => setAlbums(response.data));
@@ -33,10 +36,35 @@ export function AdminPage() {
   };
 
   const loadSlidesFor = async (albumId: number) => {
-    if (slidesByAlbum[albumId]) return;
-    const response = await getAlbumSlides(albumId);
-    setSlidesByAlbum((current) => ({ ...current, [albumId]: response.data }));
+    if (requestedAlbumsRef.current.has(albumId)) return;
+    requestedAlbumsRef.current.add(albumId);
+    try {
+      const response = await getAlbumSlides(albumId);
+      setSlidesByAlbum((current) => ({ ...current, [albumId]: response.data }));
+    } catch (error) {
+      requestedAlbumsRef.current.delete(albumId); // allow a later retry
+      throw error;
+    }
   };
+
+  // Eagerly load slides for every channel's current album so the Current Slide column can
+  // show a thumbnail without expanding the jump grid. Keyed on the distinct album ids so
+  // it only re-runs when a channel switches album (not on every slide advance).
+  const currentAlbumKey = snapshot
+    ? Array.from(new Set(snapshot.channels.map((c) => c.currentAlbumId).filter((id): id is number => id != null)))
+        .sort((a, b) => a - b)
+        .join(',')
+    : '';
+  useEffect(() => {
+    if (currentAlbumKey === '') return;
+    for (const albumId of currentAlbumKey.split(',').map(Number)) {
+      loadSlidesFor(albumId).catch((error) => console.warn('Failed to load slides for album', albumId, error));
+    }
+    // loadSlidesFor dedupes via requestedAlbumsRef, so it's safe to omit from the deps.
+  }, [currentAlbumKey]);
+
+  const currentSlide = (albumId: number | null, slideId: number | null) =>
+    albumId == null || slideId == null ? undefined : slidesByAlbum[albumId]?.find((slide) => slide.id === slideId);
 
   const toggleExpanded = async (channelId: number, albumId: number | null) => {
     if (expandedChannelId === channelId) {
@@ -77,6 +105,7 @@ export function AdminPage() {
             <th>Viewers</th>
             <th>Status</th>
             <th>Album</th>
+            <th>Current Slide</th>
             <th>Controls</th>
             <th></th>
           </tr>
@@ -104,6 +133,19 @@ export function AdminPage() {
                   </select>
                 </td>
                 <td>
+                  {(() => {
+                    const slide = currentSlide(channel.currentAlbumId, channel.currentSlideId);
+                    return slide ? (
+                      <img
+                        className="admin-current-slide"
+                        src={slide.uri}
+                        alt={`Current slide of ${channel.name}`}
+                        style={{ width: 80, height: 60, objectFit: 'cover' }}
+                      />
+                    ) : null;
+                  })()}
+                </td>
+                <td>
                   <button onClick={() => requestTogglePause(channel.channelId)}>
                     {channel.isPaused ? 'Play' : 'Pause'}
                   </button>
@@ -119,7 +161,7 @@ export function AdminPage() {
               </tr>
               {expandedChannelId === channel.channelId && channel.currentAlbumId != null && (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <ul className="admin-slide-grid">
                       {(slidesByAlbum[channel.currentAlbumId] ?? []).map((slide) => (
                         <li key={slide.id}>

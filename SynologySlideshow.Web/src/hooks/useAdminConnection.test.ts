@@ -13,7 +13,11 @@ class FakeConnection implements HubConnectionLike {
     this.handlers.set(methodName, callback);
   }
 
-  onreconnected(): void {}
+  reconnectedHandler: ((connectionId?: string) => void) | null = null;
+
+  onreconnected(callback: (connectionId?: string) => void): void {
+    this.reconnectedHandler = callback;
+  }
   onclose(): void {}
 
   async invoke<T = void>(methodName: string, ...args: any[]): Promise<T> {
@@ -29,6 +33,10 @@ class FakeConnection implements HubConnectionLike {
 
   emit(methodName: string, payload: unknown) {
     this.handlers.get(methodName)?.(payload);
+  }
+
+  emitReconnected() {
+    this.reconnectedHandler?.('new-connection-id');
   }
 }
 
@@ -88,5 +96,22 @@ describe('useAdminConnection', () => {
     });
 
     expect(fake.invokeCalls).toContainEqual(['RequestTogglePause', [9]]);
+  });
+  it('re-joins the admin group and refreshes the snapshot after a reconnect', async () => {
+    const fake = new FakeConnection();
+    fake.snapshot = { anonymousCount: 1, channels: [] };
+    const factory = () => fake;
+
+    const { result } = renderHook(() => useAdminConnection(factory));
+    await waitFor(() => expect(result.current.snapshot?.anonymousCount).toBe(1));
+    const joinsBefore = fake.invokeCalls.filter(([name]) => name === 'JoinAdmin').length;
+
+    fake.snapshot = { anonymousCount: 4, channels: [] };
+    act(() => {
+      fake.emitReconnected();
+    });
+
+    await waitFor(() => expect(result.current.snapshot?.anonymousCount).toBe(4));
+    expect(fake.invokeCalls.filter(([name]) => name === 'JoinAdmin').length).toBe(joinsBefore + 1);
   });
 });

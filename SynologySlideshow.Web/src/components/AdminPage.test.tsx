@@ -33,6 +33,12 @@ describe('AdminPage', () => {
     vi.mocked(api.getAlbums).mockResolvedValue({ data: [{ id: 5, name: 'Holiday', thumbnail: '' }] } as any);
     vi.mocked(api.createChannel).mockResolvedValue({ data: { id: 2, name: 'bedroom' } } as any);
     vi.mocked(api.deleteChannel).mockResolvedValue({} as any);
+    vi.mocked(api.getAlbumSlides).mockResolvedValue({
+      data: [
+        { id: 10, uri: '/api/albums/5/slides/10.jpg', description: '', location: '', date: '' },
+        { id: 11, uri: '/api/albums/5/slides/11.jpg', description: '', location: '', date: '' }
+      ]
+    } as any);
   });
 
   it('renders the anonymous count and each channel from the snapshot', () => {
@@ -129,5 +135,31 @@ describe('AdminPage', () => {
     render(<AdminPage />);
 
     expect(screen.getByText('Loading…')).toBeInTheDocument();
+  });
+
+  it("shows a thumbnail of each channel's current slide once its album's slides have loaded", async () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    const thumbnail = await screen.findByAltText('Current slide of kitchen');
+    expect(thumbnail).toHaveAttribute('src', '/api/albums/5/slides/10.jpg');
+    expect(api.getAlbumSlides).toHaveBeenCalledWith(5);
+  });
+
+  it('shows no current-slide thumbnail when the channel has no current slide', async () => {
+    mockHook({
+      snapshot: {
+        anonymousCount: 0,
+        channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true, viewerCount: 0 }]
+      }
+    });
+    vi.mocked(api.getAlbumSlides).mockClear();
+
+    render(<AdminPage />);
+
+    await waitFor(() => expect(api.getAlbums).toHaveBeenCalled());
+    expect(screen.queryByAltText('Current slide of kitchen')).not.toBeInTheDocument();
+    expect(api.getAlbumSlides).not.toHaveBeenCalled();
   });
 });

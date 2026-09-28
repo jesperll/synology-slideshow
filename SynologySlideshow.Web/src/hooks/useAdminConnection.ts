@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { AdminSnapshot, ChannelState } from '../types';
 import { ConnectionFactory, HubConnectionLike } from './useChannelConnection';
+import { hubReconnectPolicy, hubRetryDelay } from './hubRetryPolicy';
 
 const defaultFactory: ConnectionFactory = () =>
   new signalR.HubConnectionBuilder()
     .withUrl('/hub/slideshow')
-    .withAutomaticReconnect()
+    .withAutomaticReconnect(hubReconnectPolicy)
     .build();
 
 export interface AdminConnectionResult {
@@ -24,8 +25,22 @@ export function useAdminConnection(factory: ConnectionFactory = defaultFactory):
 
   useEffect(() => {
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const connection = factory();
     connectionRef.current = connection;
+
+    // Joins (or re-joins) the admin group. Group membership and the server's admin
+    // tracking are per-connection, so this must run after every (re)connect - otherwise
+    // the page stops receiving pushes and is counted as an anonymous viewer.
+    const joinAdmin = () =>
+      connection
+        .invoke<AdminSnapshot>('JoinAdmin')
+        .then((joined) => {
+          if (!cancelled) setSnapshot(joined);
+        })
+        .catch((error) => {
+          if (!cancelled) console.warn('Failed to join admin group:', error);
+        });
 
     connection.on('PresenceChanged', (payload: AdminSnapshot) => {
       if (!cancelled) setSnapshot(payload);
@@ -46,16 +61,33 @@ export function useAdminConnection(factory: ConnectionFactory = defaultFactory):
       });
     });
 
-    connection
-      .start()
-      .then(() => connection.invoke<AdminSnapshot>('JoinAdmin'))
-      .then((initial) => {
-        if (!cancelled) setSnapshot(initial);
-      });
+    connection.onreconnected(() => {
+      if (!cancelled) joinAdmin();
+    });
+
+    // Automatic reconnect only covers connections that were once established, so retry
+    // the initial start ourselves (and restart if SignalR ever gives up on a connection).
+    const connect = (attempt: number) => {
+      connection.start().then(
+        () => joinAdmin(),
+        (error) => {
+          if (cancelled) return;
+          console.warn('Failed to connect to admin hub, retrying:', error);
+          retryTimer = setTimeout(() => connect(attempt + 1), hubRetryDelay(attempt));
+        }
+      );
+    };
+
+    connection.onclose(() => {
+      if (!cancelled) connect(0);
+    });
+
+    connect(0);
 
     return () => {
       cancelled = true;
-      connection.stop();
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
+      connection.stop().catch(() => {});
     };
   }, [factory]);
 
