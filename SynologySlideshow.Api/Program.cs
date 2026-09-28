@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using SynologySlideshow.Api.Data;
 using SynologySlideshow.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,7 +34,17 @@ builder.Services.Configure<SynologyOptions>(
 // Add SlideShow service
 builder.Services.AddSingleton<SlideShowService>();
 
+// Channel persistence
+Directory.CreateDirectory("data");
+builder.Services.AddDbContext<SlideshowDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("Slideshow") ?? "Data Source=data/slideshow.db"));
+
 var app = builder.Build();
+
+using (var migrationScope = app.Services.CreateScope())
+{
+    migrationScope.ServiceProvider.GetRequiredService<SlideshowDbContext>().Database.Migrate();
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -57,3 +69,5 @@ app.MapFallbackToFile("index.html");
 await app.Services.GetRequiredService<SlideShowService>().InitAsync();
 
 app.Run();
+
+public partial class Program { }

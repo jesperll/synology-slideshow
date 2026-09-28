@@ -20,6 +20,7 @@ services:
     # Optional: Volume for logs
     volumes:
       - ./logs:/app/logs
+      - ./data:/app/data
     
     # Optional: Healthcheck
     healthcheck:
