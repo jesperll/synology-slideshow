@@ -14,7 +14,7 @@ describe('AdminPage', () => {
   const baseSnapshot: AdminSnapshot = {
     anonymousCount: 2,
     channels: [
-      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 3 }
+      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 3, linkedChannelIds: [] }
     ]
   };
 
@@ -26,6 +26,8 @@ describe('AdminPage', () => {
       requestJump: vi.fn(),
       requestTogglePause: vi.fn(),
       requestSwitchAlbum: vi.fn(),
+      requestLink: vi.fn().mockResolvedValue({ success: true, error: null }),
+      requestUnlink: vi.fn(),
       ...overrides
     });
 
@@ -151,7 +153,7 @@ describe('AdminPage', () => {
     mockHook({
       snapshot: {
         anonymousCount: 0,
-        channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true, viewerCount: 0 }]
+        channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true, viewerCount: 0, linkedChannelIds: [] }]
       }
     });
     vi.mocked(api.getAlbumSlides).mockClear();
@@ -161,5 +163,72 @@ describe('AdminPage', () => {
     await waitFor(() => expect(api.getAlbums).toHaveBeenCalled());
     expect(screen.queryByAltText('Current slide of kitchen')).not.toBeInTheDocument();
     expect(api.getAlbumSlides).not.toHaveBeenCalled();
+  });
+
+  const twoChannelSnapshot: AdminSnapshot = {
+    anonymousCount: 2,
+    channels: [
+      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 3, linkedChannelIds: [] },
+      { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [] }
+    ]
+  };
+
+  it('links the selected channels once two or more are checked', async () => {
+    const requestLink = vi.fn().mockResolvedValue({ success: true, error: null });
+    mockHook({ snapshot: twoChannelSnapshot, requestLink });
+
+    render(<AdminPage />);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Link selected' }));
+
+    await waitFor(() => expect(requestLink).toHaveBeenCalledWith([1, 2]));
+  });
+
+  it('disables the link button until at least two channels are selected', () => {
+    mockHook({ snapshot: twoChannelSnapshot });
+
+    render(<AdminPage />);
+
+    expect(screen.getByRole('button', { name: 'Link selected' })).toBeDisabled();
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+
+    expect(screen.getByRole('button', { name: 'Link selected' })).toBeDisabled();
+  });
+
+  it('shows a link error returned by the server instead of clearing the selection', async () => {
+    const requestLink = vi.fn().mockResolvedValue({ success: false, error: 'Channel 2 is already in a sync group.' });
+    mockHook({ snapshot: twoChannelSnapshot, requestLink });
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Link selected' }));
+
+    expect(await screen.findByText('Channel 2 is already in a sync group.')).toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')[0]).toBeChecked();
+    expect(screen.getAllByRole('checkbox')[1]).toBeChecked();
+  });
+
+  it('unlinks a channel through its row button', () => {
+    const requestUnlink = vi.fn();
+    const linkedSnapshot: AdminSnapshot = {
+      anonymousCount: 0,
+      channels: [
+        { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [2] },
+        { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [1] }
+      ]
+    };
+    mockHook({ snapshot: linkedSnapshot, requestUnlink });
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Unlink' })[0]);
+
+    expect(requestUnlink).toHaveBeenCalledWith(1);
   });
 });

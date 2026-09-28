@@ -5,7 +5,16 @@ import { createChannel, deleteChannel, getAlbums, getAlbumSlides } from '../serv
 import { Album, Slide } from '../types';
 
 export function AdminPage() {
-  const { snapshot, requestNext, requestPrevious, requestJump, requestTogglePause, requestSwitchAlbum } = useAdminConnection();
+  const {
+    snapshot,
+    requestNext,
+    requestPrevious,
+    requestJump,
+    requestTogglePause,
+    requestSwitchAlbum,
+    requestLink,
+    requestUnlink
+  } = useAdminConnection();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [newChannelName, setNewChannelName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
@@ -14,12 +23,15 @@ export function AdminPage() {
   // Albums whose slides have been requested (loaded or in flight), so the eager
   // current-slide loading and the jump grid never fetch the same album twice.
   const requestedAlbumsRef = useRef(new Set<number>());
+  const [selectedForLink, setSelectedForLink] = useState<Set<number>>(new Set());
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
     getAlbums().then((response) => setAlbums(response.data));
   }, []);
 
   const albumName = (albumId: number | null) => albums.find((a) => a.id === albumId)?.name ?? '(no album)';
+  const channelName = (channelId: number) => snapshot?.channels.find((c) => c.channelId === channelId)?.name ?? `#${channelId}`;
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -77,6 +89,28 @@ export function AdminPage() {
     setExpandedChannelId(channelId);
   };
 
+  const toggleSelectedForLink = (channelId: number) => {
+    setSelectedForLink((current) => {
+      const next = new Set(current);
+      if (next.has(channelId)) {
+        next.delete(channelId);
+      } else {
+        next.add(channelId);
+      }
+      return next;
+    });
+  };
+
+  const handleLink = async () => {
+    setLinkError(null);
+    const result = await requestLink(Array.from(selectedForLink));
+    if (!result.success) {
+      setLinkError(result.error ?? 'Could not link the selected channels.');
+      return;
+    }
+    setSelectedForLink(new Set());
+  };
+
   if (!snapshot) {
     return <p>Loading…</p>;
   }
@@ -98,14 +132,23 @@ export function AdminPage() {
         {createError && <span className="admin-error">{createError}</span>}
       </form>
 
+      <div className="admin-link-bar">
+        <button onClick={handleLink} disabled={selectedForLink.size < 2}>
+          Link selected
+        </button>
+        {linkError && <span className="admin-error">{linkError}</span>}
+      </div>
+
       <table className="admin-channel-table">
         <thead>
           <tr>
+            <th></th>
             <th>Name</th>
             <th>Viewers</th>
             <th>Status</th>
             <th>Album</th>
             <th>Current Slide</th>
+            <th>Linked with</th>
             <th>Controls</th>
             <th></th>
           </tr>
@@ -114,6 +157,13 @@ export function AdminPage() {
           {snapshot.channels.map((channel) => (
             <React.Fragment key={channel.channelId}>
               <tr>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selectedForLink.has(channel.channelId)}
+                    onChange={() => toggleSelectedForLink(channel.channelId)}
+                  />
+                </td>
                 <td>{channel.name}</td>
                 <td>{channel.viewerCount}</td>
                 <td>{channel.isPaused ? 'Paused' : 'Playing'}</td>
@@ -146,6 +196,16 @@ export function AdminPage() {
                   })()}
                 </td>
                 <td>
+                  {channel.linkedChannelIds.length === 0 ? (
+                    '—'
+                  ) : (
+                    <>
+                      {channel.linkedChannelIds.map(channelName).join(', ')}{' '}
+                      <button onClick={() => requestUnlink(channel.channelId)}>Unlink</button>
+                    </>
+                  )}
+                </td>
+                <td>
                   <button onClick={() => requestTogglePause(channel.channelId)}>
                     {channel.isPaused ? 'Play' : 'Pause'}
                   </button>
@@ -161,7 +221,7 @@ export function AdminPage() {
               </tr>
               {expandedChannelId === channel.channelId && channel.currentAlbumId != null && (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={9}>
                     <ul className="admin-slide-grid">
                       {(slidesByAlbum[channel.currentAlbumId] ?? []).map((slide) => (
                         <li key={slide.id}>

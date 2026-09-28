@@ -52,6 +52,12 @@ export interface AdminChannelEntry {
   currentSlideId: number | null;
   isPaused: boolean;
   viewerCount: number;
+  linkedChannelIds: number[];
+}
+
+export interface LinkResult {
+  success: boolean;
+  error: string | null;
 }
 
 export interface AdminSnapshot {

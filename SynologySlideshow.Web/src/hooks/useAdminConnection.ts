@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
-import { AdminSnapshot, ChannelState } from '../types';
+import { AdminSnapshot, ChannelState, LinkResult } from '../types';
 import { ConnectionFactory, HubConnectionLike } from './useChannelConnection';
 import { hubReconnectPolicy, hubRetryDelay } from './hubRetryPolicy';
 
@@ -17,6 +17,8 @@ export interface AdminConnectionResult {
   requestJump(channelId: number, slideId: number): Promise<void>;
   requestTogglePause(channelId: number): Promise<void>;
   requestSwitchAlbum(channelId: number, albumId: number): Promise<void>;
+  requestLink(channelIds: number[]): Promise<LinkResult>;
+  requestUnlink(channelId: number): Promise<void>;
 }
 
 export function useAdminConnection(factory: ConnectionFactory = defaultFactory): AdminConnectionResult {
@@ -97,6 +99,8 @@ export function useAdminConnection(factory: ConnectionFactory = defaultFactory):
     requestPrevious: async (channelId) => { await connectionRef.current?.invoke('RequestPreviousSlide', channelId); },
     requestJump: async (channelId, slideId) => { await connectionRef.current?.invoke('RequestJumpToSlide', channelId, slideId); },
     requestTogglePause: async (channelId) => { await connectionRef.current?.invoke('RequestTogglePause', channelId); },
-    requestSwitchAlbum: async (channelId, albumId) => { await connectionRef.current?.invoke('RequestSwitchAlbum', channelId, albumId); }
+    requestSwitchAlbum: async (channelId, albumId) => { await connectionRef.current?.invoke('RequestSwitchAlbum', channelId, albumId); },
+    requestLink: async (channelIds) => connectionRef.current!.invoke<LinkResult>('RequestLinkChannels', channelIds),
+    requestUnlink: async (channelId) => { await connectionRef.current?.invoke('RequestUnlinkChannel', channelId); }
   };
 }

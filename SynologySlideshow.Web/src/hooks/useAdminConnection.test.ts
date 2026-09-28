@@ -8,6 +8,7 @@ class FakeConnection implements HubConnectionLike {
   handlers = new Map<string, (...args: any[]) => void>();
   invokeCalls: [string, any[]][] = [];
   snapshot: AdminSnapshot = { anonymousCount: 0, channels: [] };
+  linkResult: { success: boolean; error: string | null } = { success: true, error: null };
 
   on(methodName: string, callback: (...args: any[]) => void): void {
     this.handlers.set(methodName, callback);
@@ -24,6 +25,9 @@ class FakeConnection implements HubConnectionLike {
     this.invokeCalls.push([methodName, args]);
     if (methodName === 'JoinAdmin') {
       return this.snapshot as unknown as T;
+    }
+    if (methodName === 'RequestLinkChannels') {
+      return this.linkResult as unknown as T;
     }
     return undefined as unknown as T;
   }
@@ -69,7 +73,7 @@ describe('useAdminConnection', () => {
     const fake = new FakeConnection();
     fake.snapshot = {
       anonymousCount: 0,
-      channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1 }]
+      channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [] }]
     };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
@@ -113,5 +117,31 @@ describe('useAdminConnection', () => {
 
     await waitFor(() => expect(result.current.snapshot?.anonymousCount).toBe(4));
     expect(fake.invokeCalls.filter(([name]) => name === 'JoinAdmin').length).toBe(joinsBefore + 1);
+  });
+
+  it('returns the link result and forwards the channel ids', async () => {
+    const fake = new FakeConnection();
+    fake.snapshot = { anonymousCount: 0, channels: [] };
+    fake.linkResult = { success: true, error: null };
+
+    const { result } = renderHook(() => useAdminConnection(() => fake));
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+
+    const outcome = await result.current.requestLink([1, 2]);
+
+    expect(outcome).toEqual({ success: true, error: null });
+    expect(fake.invokeCalls).toContainEqual(['RequestLinkChannels', [[1, 2]]]);
+  });
+
+  it('sends the channel id when requesting an unlink', async () => {
+    const fake = new FakeConnection();
+    fake.snapshot = { anonymousCount: 0, channels: [] };
+
+    const { result } = renderHook(() => useAdminConnection(() => fake));
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+
+    await result.current.requestUnlink(4);
+
+    expect(fake.invokeCalls).toContainEqual(['RequestUnlinkChannel', [4]]);
   });
 });
