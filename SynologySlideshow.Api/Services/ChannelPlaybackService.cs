@@ -177,6 +177,7 @@ public class ChannelPlaybackService
     {
         var dto = ToDto(channel);
         await _hubContext.Clients.Group(SlideshowHub.GroupName(channel.Id)).SendAsync("ChannelStateChanged", dto);
+        await _hubContext.Clients.Group(SlideshowHub.AdminGroupName).SendAsync("ChannelStateChanged", dto);
         return dto;
     }
 

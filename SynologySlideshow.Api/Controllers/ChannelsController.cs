@@ -1,7 +1,9 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SynologySlideshow.Api.Data;
+using SynologySlideshow.Api.Realtime;
 using SynologySlideshow.Api.Services;
 
 namespace SynologySlideshow.Api.Controllers;
@@ -16,11 +18,19 @@ public class ChannelsController : ControllerBase
 
     private readonly SlideshowDbContext _db;
     private readonly ChannelPlaybackService _playback;
+    private readonly IHubContext<SlideshowHub> _hubContext;
+    private readonly AdminSnapshotService _snapshotService;
 
-    public ChannelsController(SlideshowDbContext db, ChannelPlaybackService playback)
+    public ChannelsController(
+        SlideshowDbContext db,
+        ChannelPlaybackService playback,
+        IHubContext<SlideshowHub> hubContext,
+        AdminSnapshotService snapshotService)
     {
         _db = db;
         _playback = playback;
+        _hubContext = hubContext;
+        _snapshotService = snapshotService;
     }
 
     [HttpGet]
@@ -64,6 +74,7 @@ public class ChannelsController : ControllerBase
         }
 
         _playback.StartTimer(channel.Id);
+        await BroadcastPresenceAsync();
         return CreatedAtAction(nameof(List), new ChannelSummary { Id = channel.Id, Name = channel.Name });
     }
 
@@ -76,6 +87,13 @@ public class ChannelsController : ControllerBase
         _db.Channels.Remove(channel);
         await _db.SaveChangesAsync();
         _playback.StopTimer(id);
+        await BroadcastPresenceAsync();
         return NoContent();
+    }
+
+    private async Task BroadcastPresenceAsync()
+    {
+        var snapshot = await _snapshotService.BuildAsync();
+        await _hubContext.Clients.Group(SlideshowHub.AdminGroupName).SendAsync("PresenceChanged", snapshot);
     }
 }

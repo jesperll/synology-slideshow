@@ -7,16 +7,42 @@ namespace SynologySlideshow.Api.Realtime;
 
 public class SlideshowHub : Hub
 {
+    public const string AdminGroupName = "admin";
+
     private readonly SlideshowDbContext _db;
     private readonly ChannelPlaybackService _playback;
+    private readonly PresenceTracker _presence;
+    private readonly AdminSnapshotService _snapshotService;
 
-    public SlideshowHub(SlideshowDbContext db, ChannelPlaybackService playback)
+    public SlideshowHub(SlideshowDbContext db, ChannelPlaybackService playback, PresenceTracker presence, AdminSnapshotService snapshotService)
     {
         _db = db;
         _playback = playback;
+        _presence = presence;
+        _snapshotService = snapshotService;
     }
 
     public static string GroupName(int channelId) => $"channel:{channelId}";
+
+    public override async Task OnConnectedAsync()
+    {
+        _presence.OnConnected();
+        await BroadcastPresenceAsync();
+        await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        _presence.OnDisconnected(Context.ConnectionId);
+        await BroadcastPresenceAsync();
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    public async Task<AdminSnapshot> JoinAdmin()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroupName);
+        return await _snapshotService.BuildAsync();
+    }
 
     public async Task<ChannelStateDto?> JoinChannel(string channelName)
     {
@@ -25,11 +51,17 @@ public class SlideshowHub : Hub
         if (channel == null) return null;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(channel.Id));
+        _presence.OnJoinedChannel(Context.ConnectionId, channel.Id);
+        await BroadcastPresenceAsync();
         return await _playback.GetStateAsync(channel.Id);
     }
 
-    public Task LeaveChannel(int channelId) =>
-        Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(channelId));
+    public async Task LeaveChannel(int channelId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(channelId));
+        _presence.OnLeftChannel(Context.ConnectionId, channelId);
+        await BroadcastPresenceAsync();
+    }
 
     public Task<ChannelStateDto> RequestNextSlide(int channelId) => _playback.AdvanceAsync(channelId, 1);
 
@@ -40,4 +72,10 @@ public class SlideshowHub : Hub
     public Task<ChannelStateDto> RequestTogglePause(int channelId) => _playback.TogglePauseAsync(channelId);
 
     public Task<ChannelStateDto> RequestSwitchAlbum(int channelId, int albumId) => _playback.SetAlbumAsync(channelId, albumId);
+
+    private async Task BroadcastPresenceAsync()
+    {
+        var snapshot = await _snapshotService.BuildAsync();
+        await Clients.Group(AdminGroupName).SendAsync("PresenceChanged", snapshot);
+    }
 }
