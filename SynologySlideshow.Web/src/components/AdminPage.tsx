@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useAdminConnection } from '../hooks/useAdminConnection';
 import { createChannel, deleteChannel, getAlbums, getAlbumSlides } from '../services/api';
@@ -24,8 +25,10 @@ export function AdminPage() {
     try {
       await createChannel(name);
       setNewChannelName('');
-    } catch {
-      setCreateError(`Could not create '${name}' — the name may already be in use or reserved.`);
+    } catch (err) {
+      const serverMessage =
+        axios.isAxiosError(err) && typeof err.response?.data === 'string' ? err.response.data : undefined;
+      setCreateError(serverMessage ?? `Could not create '${name}' — the name may already be in use or reserved.`);
     }
   };
 
