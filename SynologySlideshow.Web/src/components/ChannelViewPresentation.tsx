@@ -110,7 +110,10 @@ export function ChannelViewPresentation({
           settings={settings}
           onSelectAlbum={(album) => onSwitchAlbum(album.id)}
           onSettingsChange={updateSettings}
-          onClose={() => setShowOverlay(false)}
+          onClose={() => {
+            setShowOverlay(false);
+            if (state.isPaused) onTogglePause();
+          }}
           settingsFooter={
             <div className="channel-leave">
               <p>

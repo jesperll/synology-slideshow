@@ -98,4 +98,51 @@ describe('ChannelViewPresentation', () => {
 
     expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
   });
+
+  it('unpauses when the overlay menu is closed while the channel is paused', () => {
+    const onTogglePause = vi.fn();
+    const { container } = render(
+      <ChannelViewPresentation
+        state={{ ...baseState, isPaused: true }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onTogglePause={onTogglePause}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    // Open the overlay locally (mirrors the "double-click to open" gesture).
+    fireEvent.doubleClick(container.querySelector('.scrim')!);
+    onTogglePause.mockClear();
+
+    // Dismiss via OverlayMenu's own close affordance (double-click inside the menu),
+    // the same gesture a viewer uses to dismiss the settings/album grid.
+    fireEvent.doubleClick(container.querySelector('.overlay-menu')!);
+
+    expect(onTogglePause).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
+  });
+
+  it('does not toggle pause again when the overlay menu is closed while already unpaused', () => {
+    const onTogglePause = vi.fn();
+    const { container } = render(
+      <ChannelViewPresentation
+        state={baseState}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onTogglePause={onTogglePause}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    fireEvent.doubleClick(container.querySelector('.scrim')!);
+    onTogglePause.mockClear();
+
+    fireEvent.doubleClick(container.querySelector('.overlay-menu')!);
+
+    expect(onTogglePause).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
+  });
 });
