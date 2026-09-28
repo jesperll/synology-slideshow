@@ -76,6 +76,10 @@ public class SlideshowHub : Hub
 
     public Task<ChannelStateDto> RequestSwitchAlbum(int channelId, int albumId) => _playback.SetAlbumAsync(channelId, albumId);
 
+    public Task<LinkResult> RequestLinkChannels(int[] channelIds) => _playback.LinkAsync(channelIds);
+
+    public Task<ChannelStateDto> RequestUnlinkChannel(int channelId) => _playback.UnlinkAsync(channelId);
+
     // Presence broadcasts are best-effort: a failure here must never abort the caller's
     // connect/disconnect/join/leave handling for an unrelated connection.
     private async Task BroadcastPresenceAsync()

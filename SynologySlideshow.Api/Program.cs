@@ -42,6 +42,7 @@ builder.Services.AddDbContext<SlideshowDbContext>(options =>
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ISlideSource, SlideShowSlideSource>();
+builder.Services.AddSingleton<SyncGroupService>();
 builder.Services.AddSingleton<ChannelPlaybackService>();
 builder.Services.AddHostedService<ChannelTimerStartup>();
 builder.Services.AddSingleton<PresenceTracker>();
