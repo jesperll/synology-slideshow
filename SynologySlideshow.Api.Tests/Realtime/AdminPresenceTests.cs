@@ -117,6 +117,28 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
     }
 
     [Fact]
+    public async Task AConnectionThatOnlyJoinsAdminIsNotCountedAsAnonymous()
+    {
+        var probe = BuildConnection();
+        await probe.StartAsync();
+        try
+        {
+            // Both _admin and probe are still anonymous at this point (neither has joined admin yet).
+            var beforeProbeJoinsAdmin = await _admin.InvokeAsync<AdminSnapshot>("JoinAdmin");
+
+            var afterProbeJoinsAdmin = await probe.InvokeAsync<AdminSnapshot>("JoinAdmin");
+
+            // Only the anonymous count for `probe` should disappear - the admin dashboard connecting
+            // to itself must not inflate the "N anonymous connected" number it displays.
+            Assert.Equal(beforeProbeJoinsAdmin.AnonymousCount - 1, afterProbeJoinsAdmin.AnonymousCount);
+        }
+        finally
+        {
+            await probe.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task AdminReceivesAPresenceUpdateWhenAChannelIsDeletedOverRest()
     {
         var channel = await CreateChannelAsync("presence-deleted-over-rest-test");

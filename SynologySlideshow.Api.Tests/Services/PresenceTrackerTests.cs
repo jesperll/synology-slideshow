@@ -56,4 +56,40 @@ public class PresenceTrackerTests
         Assert.Equal(2, tracker.GetViewerCount(1));
         Assert.Equal(0, tracker.GetAnonymousCount());
     }
+
+    [Fact]
+    public void JoiningTheSameChannelTwiceDoesNotDoubleCountTheViewer()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnConnected();
+
+        tracker.OnJoinedChannel("A", channelId: 1);
+        tracker.OnJoinedChannel("A", channelId: 1); // e.g. a retried JoinChannel call on the same connection
+
+        Assert.Equal(1, tracker.GetViewerCount(1));
+    }
+
+    [Fact]
+    public void JoiningADifferentChannelMovesTheViewerWithoutAnExplicitLeave()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnConnected();
+
+        tracker.OnJoinedChannel("A", channelId: 1);
+        tracker.OnJoinedChannel("A", channelId: 2); // no OnLeftChannel(1) in between
+
+        Assert.Equal(0, tracker.GetViewerCount(1));
+        Assert.Equal(1, tracker.GetViewerCount(2));
+    }
+
+    [Fact]
+    public void AConnectionThatOnlyJoinsAdminDoesNotCountAsAnonymous()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnConnected();
+
+        tracker.OnJoinedAdmin("A");
+
+        Assert.Equal(0, tracker.GetAnonymousCount());
+    }
 }
