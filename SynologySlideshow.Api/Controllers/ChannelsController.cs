@@ -90,6 +90,10 @@ public class ChannelsController : ControllerBase
         var channel = await _db.Channels.FindAsync(id);
         if (channel == null) return NotFound();
 
+        // Dissolve any sync group first (UnlinkAsync reads the channel row, so it must still exist);
+        // otherwise surviving members would keep fanning out to this deleted id and throw.
+        await _playback.UnlinkAsync(id);
+
         _db.Channels.Remove(channel);
         await _db.SaveChangesAsync();
         _presence.RemoveChannel(id);

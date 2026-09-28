@@ -1,7 +1,10 @@
+using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 using SynologySlideshow.Api.Controllers;
 using SynologySlideshow.Api.Realtime;
+using SynologySlideshow.Api.Services;
 using Xunit;
 
 namespace SynologySlideshow.Api.Tests.Realtime;
@@ -88,6 +91,24 @@ public class SlideshowHubLinkingTests : IClassFixture<SlideshowApiFactory>, IAsy
         await Task.Delay(200);
 
         Assert.DoesNotContain(receivedByB, s => s.ChannelId == channelB.Id);
+    }
+
+    [Fact]
+    public async Task DeletingALinkedChannelLeavesTheSurvivorUnlinkedAndControllable()
+    {
+        var survivor = await CreateChannelAsync("delete-link-survivor");
+        var doomed = await CreateChannelAsync("delete-link-doomed");
+        var linkResult = await _connectionA.InvokeAsync<LinkResult>("RequestLinkChannels", new[] { survivor.Id, doomed.Id });
+        Assert.True(linkResult.Success);
+
+        var deleteResponse = await _factory.CreateClient().DeleteAsync($"/api/channels/{doomed.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var state = await _connectionA.InvokeAsync<ChannelStateDto>("RequestTogglePause", survivor.Id);
+        Assert.Equal(survivor.Id, state.ChannelId);
+
+        var playback = _factory.Services.GetRequiredService<ChannelPlaybackService>();
+        Assert.Equal(new[] { survivor.Id }, playback.GetGroupMembers(survivor.Id).ToArray());
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)

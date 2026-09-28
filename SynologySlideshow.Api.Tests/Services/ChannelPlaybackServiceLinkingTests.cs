@@ -90,6 +90,28 @@ public class ChannelPlaybackServiceLinkingTests : IDisposable
     }
 
     [Fact]
+    public async Task LinkingASeedWithNoAlbumClearsTheOtherMembersAlbumAndSlide()
+    {
+        int albumlessId;
+        using (var scope = _provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
+            var albumless = new Channel { Name = "hallway", NormalizedName = "HALLWAY", CurrentAlbumId = null, IsPaused = false };
+            db.Channels.Add(albumless);
+            db.SaveChanges();
+            albumlessId = albumless.Id;
+        }
+        await _playback.AdvanceAsync(_channelA, 1); // A now has album 1 and slide 10
+
+        var result = await _playback.LinkAsync(new[] { albumlessId, _channelA });
+
+        Assert.True(result.Success);
+        var stateA = await _playback.GetStateAsync(_channelA);
+        Assert.Null(stateA.CurrentAlbumId);
+        Assert.Null(stateA.CurrentSlideId);
+    }
+
+    [Fact]
     public async Task LinkingFailsWhenAChannelDoesNotExist()
     {
         var result = await _playback.LinkAsync(new[] { _channelA, 999999 });

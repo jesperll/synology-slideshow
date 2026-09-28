@@ -84,6 +84,12 @@ public class ChannelPlaybackService
             {
                 await SetAlbumOneAsync(memberId, albumId);
             }
+            else
+            {
+                // "No album" is a real state to mirror: TickAsync assumes every member shares the
+                // driving member's album.
+                await ClearAlbumOneAsync(memberId);
+            }
             if (seedState.CurrentSlideId is int slideId)
             {
                 await JumpOneAsync(memberId, slideId);
@@ -232,6 +238,24 @@ public class ChannelPlaybackService
 
         if (channel.CurrentSlideId != null)
         {
+            channel.CurrentSlideId = null;
+            await db.SaveChangesAsync();
+        }
+
+        var dto = await BuildAndBroadcastAsync(channel);
+        ResetTimer(channelId);
+        return dto;
+    }
+
+    private async Task<ChannelStateDto> ClearAlbumOneAsync(int channelId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
+        var channel = await db.Channels.FindAsync(channelId) ?? throw new ChannelNotFoundException(channelId);
+
+        if (channel.CurrentAlbumId != null || channel.CurrentSlideId != null)
+        {
+            channel.CurrentAlbumId = null;
             channel.CurrentSlideId = null;
             await db.SaveChangesAsync();
         }
