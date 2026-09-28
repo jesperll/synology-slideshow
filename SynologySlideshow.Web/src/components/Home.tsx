@@ -6,6 +6,7 @@ import { useKeyboard } from '../hooks/useKeyboard';
 import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
 import { useTabVisibility } from '../hooks/useTabVisibility';
 import { useSettings } from '../hooks/useSettings';
+import { usePresenceConnection } from '../hooks/usePresenceConnection';
 import { SwipeArea } from './SwipeArea';
 import { Clock } from './Clock';
 import { SlideInfo } from './SlideInfo';
@@ -51,6 +52,8 @@ export function Home() {
 
   // Initialize screen wake lock (only when tab is visible)
   useScreenWakeLock(isTabVisible);
+
+  usePresenceConnection();
 
   // Preload next few images when current slide changes
   useEffect(() => {
