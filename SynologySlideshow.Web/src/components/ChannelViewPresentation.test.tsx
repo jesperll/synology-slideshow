@@ -73,6 +73,66 @@ describe('ChannelViewPresentation', () => {
     expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
   });
 
+  it('opens the overlay without toggling pause when the channel is already paused', () => {
+    const onTogglePause = vi.fn();
+    const { container } = render(
+      <ChannelViewPresentation
+        state={{ ...baseState, isPaused: true }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onTogglePause={onTogglePause}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    fireEvent.doubleClick(container.querySelector('.scrim')!);
+
+    expect(onTogglePause).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
+  });
+
+  it('opens the overlay and pauses when the channel is playing', () => {
+    const onTogglePause = vi.fn();
+    const { container } = render(
+      <ChannelViewPresentation
+        state={{ ...baseState, isPaused: false }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onTogglePause={onTogglePause}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    fireEvent.doubleClick(container.querySelector('.scrim')!);
+
+    expect(onTogglePause).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
+  });
+
+  it('Space opens the overlay without re-toggling an existing pause, and a second Space closes it and unpauses', () => {
+    const onTogglePause = vi.fn();
+    render(
+      <ChannelViewPresentation
+        state={{ ...baseState, isPaused: true }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onTogglePause={onTogglePause}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    fireEvent.keyDown(window, { code: 'Space' });
+    expect(onTogglePause).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { code: 'Space' });
+    expect(onTogglePause).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
+  });
+
   it('does not show the local overlay when isPaused turns true from a remote push', () => {
     const { rerender } = render(
       <ChannelViewPresentation

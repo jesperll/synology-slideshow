@@ -3,6 +3,8 @@ import { Album, ChannelState, Slide, SwipeDirection } from '../types';
 import { getAlbums, getAlbumSlides } from '../services/api';
 import { useSettings } from '../hooks/useSettings';
 import { useKeyboard } from '../hooks/useKeyboard';
+import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
+import { useTabVisibility } from '../hooks/useTabVisibility';
 import { SwipeArea } from './SwipeArea';
 import { Clock } from './Clock';
 import { SlideLayer } from './SlideLayer';
@@ -26,6 +28,8 @@ export function ChannelViewPresentation({
   onLeave
 }: ChannelViewPresentationProps) {
   const { settings, updateSettings } = useSettings();
+  const isTabVisible = useTabVisibility();
+  useScreenWakeLock(isTabVisible);
   const [showOverlay, setShowOverlay] = useState(false);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
@@ -52,9 +56,16 @@ export function ChannelViewPresentation({
       .catch((error) => console.error('Failed to load album slides:', error));
   }, [state.currentAlbumId, state.currentSlideId]);
 
-  const toggleOverlayAndPause = () => {
-    setShowOverlay((previous) => !previous);
-    onTogglePause();
+  // Pause is shared across every viewer of the channel, so only toggle it when it isn't
+  // already in the state we want (it may have been paused/unpaused remotely).
+  const openOverlay = () => {
+    setShowOverlay(true);
+    if (!state.isPaused) onTogglePause();
+  };
+
+  const closeOverlay = () => {
+    setShowOverlay(false);
+    if (state.isPaused) onTogglePause();
   };
 
   const handleSwipe = (direction: SwipeDirection) => {
@@ -79,7 +90,10 @@ export function ChannelViewPresentation({
   useKeyboard({
     onArrowRight: onNext,
     onArrowLeft: onPrevious,
-    onSpace: toggleOverlayAndPause
+    onSpace: () => {
+      if (showOverlay) closeOverlay();
+      else openOverlay();
+    }
   });
 
   return (
@@ -96,11 +110,11 @@ export function ChannelViewPresentation({
         />
       )}
 
-      <section className="full-screen scrim" onDoubleClick={toggleOverlayAndPause} />
+      <section className="full-screen scrim" onDoubleClick={openOverlay} />
       <Clock />
 
       {showOverlay && (
-        <section className="full-screen overlay-scrim" onDoubleClick={toggleOverlayAndPause} />
+        <section className="full-screen overlay-scrim" onDoubleClick={closeOverlay} />
       )}
 
       {showOverlay && (
@@ -110,10 +124,7 @@ export function ChannelViewPresentation({
           settings={settings}
           onSelectAlbum={(album) => onSwitchAlbum(album.id)}
           onSettingsChange={updateSettings}
-          onClose={() => {
-            setShowOverlay(false);
-            if (state.isPaused) onTogglePause();
-          }}
+          onClose={closeOverlay}
           settingsFooter={
             <div className="channel-leave">
               <p>
