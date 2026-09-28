@@ -47,6 +47,7 @@ builder.Services.AddSingleton<ChannelPlaybackService>();
 builder.Services.AddHostedService<ChannelTimerStartup>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddScoped<AdminSnapshotService>();
+builder.Services.AddSingleton<ViewStatsService>();
 
 var app = builder.Build();
 
