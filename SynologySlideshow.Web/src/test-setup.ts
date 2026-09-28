@@ -1,4 +1,14 @@
 import '@testing-library/jest-dom/vitest';
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+
+// vitest.config.ts does not set `test.globals: true`, so @testing-library/react's
+// automatic afterEach cleanup (which relies on detecting a global `afterEach`) never
+// registers. Without this, DOM from one test's render() leaks into the next test in the
+// same file. Wire it up explicitly for every test file.
+afterEach(() => {
+  cleanup();
+});
 
 // Ensure localStorage is available in test environment
 if (typeof localStorage === 'undefined') {
@@ -19,5 +29,5 @@ if (typeof localStorage === 'undefined') {
     length: 0,
     key: (index: number) => Object.keys(localStorageData)[index] || null
   };
-  (global as any).localStorage = localStorage;
+  (globalThis as any).localStorage = localStorage;
 }

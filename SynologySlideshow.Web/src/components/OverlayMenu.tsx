@@ -11,15 +11,17 @@ interface OverlayMenuProps {
   onSelectAlbum: (album: Album) => void;
   onSettingsChange: (settings: Partial<AppSettings>) => void;
   onClose: () => void;
+  settingsFooter?: React.ReactNode;
 }
 
-export function OverlayMenu({ 
+export function OverlayMenu({
   albums,
   currentAlbumId,
-  settings, 
-  onSelectAlbum, 
-  onSettingsChange, 
-  onClose 
+  settings,
+  onSelectAlbum,
+  onSettingsChange,
+  onClose,
+  settingsFooter
 }: OverlayMenuProps) {
   const [activeTab, setActiveTab] = useState<NavTab>('albums');
 
@@ -38,11 +40,14 @@ export function OverlayMenu({
           onSelectAlbum={onSelectAlbum}
         />
       ) : (
-        <Settings 
-          settings={settings} 
-          onSettingsChange={onSettingsChange}
-          onClose={onClose}
-        />
+        <>
+          <Settings
+            settings={settings}
+            onSettingsChange={onSettingsChange}
+            onClose={onClose}
+          />
+          {settingsFooter}
+        </>
       )}
     </section>
   );
