@@ -97,8 +97,13 @@ export function AdminPage() {
       return;
     }
     if (!statsByChannel[channelId]) {
-      const response = await getChannelStats(channelId);
-      setStatsByChannel((current) => ({ ...current, [channelId]: response.data }));
+      try {
+        const response = await getChannelStats(channelId);
+        setStatsByChannel((current) => ({ ...current, [channelId]: response.data }));
+      } catch (error) {
+        console.warn('Failed to load stats for channel', channelId, error);
+        return;
+      }
     }
     setStatsExpandedId(channelId);
   };

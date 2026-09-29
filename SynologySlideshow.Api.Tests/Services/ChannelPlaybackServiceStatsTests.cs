@@ -85,13 +85,14 @@ public class ChannelPlaybackServiceStatsTests : IDisposable
     }
 
     [Fact]
-    public async Task SwitchingAlbumsRecordsNoViewUntilTheNextAdvanceOrJump()
+    public async Task SwitchingAlbumsRecordsAViewForTheFirstSlide()
     {
         await _playback.SetAlbumAsync(_channelId, 1);
 
         var stats = await _viewStats.GetStatsAsync(_channelId);
 
-        Assert.Equal(0, stats.TotalViews);
+        Assert.Equal(1, stats.TotalViews);
+        Assert.Contains(stats.TopViewed, s => s.SlideId == 10 && s.ViewCount == 1);
     }
 
     [Fact]

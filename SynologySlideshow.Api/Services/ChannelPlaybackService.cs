@@ -211,9 +211,9 @@ public class ChannelPlaybackService
         }
 
         var dto = await BuildAndBroadcastAsync(channel);
-        if (dto.CurrentSlideId is int shownSlideId)
+        if (slides.Length > 0 && dto.CurrentSlideId is int shownSlideId)
         {
-            await _viewStats.RecordViewAsync(channelId, shownSlideId);
+            await RecordViewSafeAsync(channelId, shownSlideId);
         }
         ResetTimer(channelId);
         return dto;
@@ -236,7 +236,7 @@ public class ChannelPlaybackService
         var dto = await BuildAndBroadcastAsync(channel);
         if (found && dto.CurrentSlideId is int shownSlideId)
         {
-            await _viewStats.RecordViewAsync(channelId, shownSlideId);
+            await RecordViewSafeAsync(channelId, shownSlideId);
         }
         ResetTimer(channelId);
         return dto;
@@ -303,8 +303,24 @@ public class ChannelPlaybackService
         await db.SaveChangesAsync();
 
         var dto = await BuildAndBroadcastAsync(channel);
+        if (dto.CurrentSlideId is int shownSlideId)
+        {
+            await RecordViewSafeAsync(channelId, shownSlideId);
+        }
         ResetTimer(channelId);
         return dto;
+    }
+
+    private async Task RecordViewSafeAsync(int channelId, int slideId)
+    {
+        try
+        {
+            await _viewStats.RecordViewAsync(channelId, slideId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record a slide view for channel {ChannelId}, slide {SlideId}", channelId, slideId);
+        }
     }
 
     private SlideRef[] GetSlides(int? albumId) =>

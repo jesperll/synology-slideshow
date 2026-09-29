@@ -268,4 +268,18 @@ describe('AdminPage', () => {
     expect(screen.getByText('Slide #10 — 3 views')).toBeInTheDocument();
     expect(screen.getByText('Slide #20 — 2 views')).toBeInTheDocument();
   });
+
+  it('does not crash or expand the stats panel when getChannelStats rejects', async () => {
+    mockHook();
+    vi.mocked(api.getChannelStats).mockRejectedValue(new Error('network error'));
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Stats' })[0]);
+
+    await waitFor(() => expect(api.getChannelStats).toHaveBeenCalled());
+
+    expect(screen.queryByText(/Total views:/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Stats' })[0]).toBeInTheDocument();
+  });
 });
