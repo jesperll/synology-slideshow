@@ -35,7 +35,8 @@ public class ChannelPlaybackServiceLinkingTests : IDisposable
             _provider.GetRequiredService<IServiceScopeFactory>(),
             _hub,
             new FakeLogger<ChannelPlaybackService>(),
-            _syncGroups);
+            _syncGroups,
+            new ViewStatsService(_provider.GetRequiredService<IServiceScopeFactory>()));
 
         _slides.SlidesByAlbum[1] = new[] { new SlideRef(10), new SlideRef(20), new SlideRef(30) };
         _slides.SlidesByAlbum[2] = new[] { new SlideRef(100), new SlideRef(200) };

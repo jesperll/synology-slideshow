@@ -23,6 +23,7 @@ public class ChannelPlaybackService
     private readonly IHubContext<SlideshowHub> _hubContext;
     private readonly ILogger<ChannelPlaybackService> _logger;
     private readonly SyncGroupService _syncGroups;
+    private readonly ViewStatsService _viewStats;
     private readonly ConcurrentDictionary<int, Timer> _timers = new();
 
     public ChannelPlaybackService(
@@ -30,13 +31,15 @@ public class ChannelPlaybackService
         IServiceScopeFactory scopeFactory,
         IHubContext<SlideshowHub> hubContext,
         ILogger<ChannelPlaybackService> logger,
-        SyncGroupService syncGroups)
+        SyncGroupService syncGroups,
+        ViewStatsService viewStats)
     {
         _slideSource = slideSource;
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
         _logger = logger;
         _syncGroups = syncGroups;
+        _viewStats = viewStats;
     }
 
     public async Task<ChannelStateDto> GetStateAsync(int channelId)
@@ -208,6 +211,10 @@ public class ChannelPlaybackService
         }
 
         var dto = await BuildAndBroadcastAsync(channel);
+        if (dto.CurrentSlideId is int shownSlideId)
+        {
+            await _viewStats.RecordViewAsync(channelId, shownSlideId);
+        }
         ResetTimer(channelId);
         return dto;
     }
@@ -226,6 +233,10 @@ public class ChannelPlaybackService
         }
 
         var dto = await BuildAndBroadcastAsync(channel);
+        if (dto.CurrentSlideId is int shownSlideId)
+        {
+            await _viewStats.RecordViewAsync(channelId, shownSlideId);
+        }
         ResetTimer(channelId);
         return dto;
     }

@@ -32,7 +32,7 @@ public class ChannelPlaybackServiceTests : IDisposable
             scope.ServiceProvider.GetRequiredService<SlideshowDbContext>().Database.Migrate();
         }
 
-        _playback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService());
+        _playback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService(), new ViewStatsService(_provider.GetRequiredService<IServiceScopeFactory>()));
 
         _slides.SlidesByAlbum[1] = new[] { new SlideRef(10), new SlideRef(20), new SlideRef(30) };
 
@@ -100,7 +100,7 @@ public class ChannelPlaybackServiceTests : IDisposable
     {
         await _playback.JumpAsync(_channelId, 20);
 
-        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService());
+        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService(), new ViewStatsService(_provider.GetRequiredService<IServiceScopeFactory>()));
 
         var state = await freshPlayback.GetStateAsync(_channelId);
         Assert.Equal(20, state.CurrentSlideId);
@@ -180,7 +180,7 @@ public class ChannelPlaybackServiceTests : IDisposable
     {
         await _playback.TogglePauseAsync(_channelId); // persist IsPaused = true
 
-        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService());
+        var freshPlayback = new ChannelPlaybackService(_slides, _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService(), new ViewStatsService(_provider.GetRequiredService<IServiceScopeFactory>()));
         _hub.Sent.Clear();
 
         await freshPlayback.TickAsync(_channelId);
@@ -191,7 +191,7 @@ public class ChannelPlaybackServiceTests : IDisposable
     [Fact]
     public async Task TimerDrivenTickLogsAndSwallowsExceptionsInsteadOfCrashingTheTimer()
     {
-        var throwingPlayback = new ChannelPlaybackService(new ThrowingSlideSource(), _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService());
+        var throwingPlayback = new ChannelPlaybackService(new ThrowingSlideSource(), _provider.GetRequiredService<IServiceScopeFactory>(), _hub, _logger, new SyncGroupService(), new ViewStatsService(_provider.GetRequiredService<IServiceScopeFactory>()));
 
         // OnTick is the private callback the System.Threading.Timer invokes; drive it directly
         // via reflection rather than waiting out the real 30s AdvanceInterval.

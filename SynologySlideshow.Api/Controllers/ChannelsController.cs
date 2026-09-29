@@ -22,6 +22,7 @@ public class ChannelsController : ControllerBase
     private readonly AdminSnapshotService _snapshotService;
     private readonly PresenceTracker _presence;
     private readonly ILogger<ChannelsController> _logger;
+    private readonly ViewStatsService _viewStats;
 
     public ChannelsController(
         SlideshowDbContext db,
@@ -29,7 +30,8 @@ public class ChannelsController : ControllerBase
         IHubContext<SlideshowHub> hubContext,
         AdminSnapshotService snapshotService,
         PresenceTracker presence,
-        ILogger<ChannelsController> logger)
+        ILogger<ChannelsController> logger,
+        ViewStatsService viewStats)
     {
         _db = db;
         _playback = playback;
@@ -37,6 +39,7 @@ public class ChannelsController : ControllerBase
         _snapshotService = snapshotService;
         _presence = presence;
         _logger = logger;
+        _viewStats = viewStats;
     }
 
     [HttpGet]
@@ -100,6 +103,13 @@ public class ChannelsController : ControllerBase
         _playback.StopTimer(id);
         await BroadcastPresenceAsync();
         return NoContent();
+    }
+
+    [HttpGet("{id}/stats")]
+    public async Task<IActionResult> GetStats(int id)
+    {
+        if (!await _db.Channels.AnyAsync(c => c.Id == id)) return NotFound();
+        return Ok(await _viewStats.GetStatsAsync(id));
     }
 
     // Best-effort: the mutation has already been saved, so a broadcast failure must not turn
