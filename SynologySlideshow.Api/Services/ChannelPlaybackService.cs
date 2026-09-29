@@ -226,14 +226,15 @@ public class ChannelPlaybackService
         var channel = await db.Channels.FindAsync(channelId) ?? throw new ChannelNotFoundException(channelId);
 
         var slides = GetSlides(channel.CurrentAlbumId);
-        if (Array.FindIndex(slides, s => s.Id == slideId) >= 0)
+        var found = Array.FindIndex(slides, s => s.Id == slideId) >= 0;
+        if (found)
         {
             channel.CurrentSlideId = slideId;
             await db.SaveChangesAsync();
         }
 
         var dto = await BuildAndBroadcastAsync(channel);
-        if (dto.CurrentSlideId is int shownSlideId)
+        if (found && dto.CurrentSlideId is int shownSlideId)
         {
             await _viewStats.RecordViewAsync(channelId, shownSlideId);
         }

@@ -105,6 +105,23 @@ public class ChannelPlaybackServiceStatsTests : IDisposable
         Assert.Contains(stats.TopViewed, s => s.SlideId == 10 && s.ViewCount == 1);
     }
 
+    [Fact]
+    public async Task JumpingToAnUnknownSlideRecordsNoView()
+    {
+        await _playback.JumpAsync(_channelId, 20); // jump to a valid slide
+
+        var statsAfterValidJump = await _viewStats.GetStatsAsync(_channelId);
+        Assert.Equal(1, statsAfterValidJump.TotalViews);
+
+        await _playback.JumpAsync(_channelId, 12345); // jump to an unknown slide
+
+        var statsAfterInvalidJump = await _viewStats.GetStatsAsync(_channelId);
+
+        // The view count should still be 1, not 2 (invalid jump should not record a view)
+        Assert.Equal(1, statsAfterInvalidJump.TotalViews);
+        Assert.Contains(statsAfterInvalidJump.TopViewed, s => s.SlideId == 20 && s.ViewCount == 1);
+    }
+
     public void Dispose()
     {
         _provider.Dispose();
