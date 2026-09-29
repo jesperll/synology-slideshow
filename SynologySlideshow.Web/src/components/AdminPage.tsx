@@ -1,8 +1,8 @@
 import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAdminConnection } from '../hooks/useAdminConnection';
-import { createChannel, deleteChannel, getAlbums, getAlbumSlides } from '../services/api';
-import { Album, Slide } from '../types';
+import { createChannel, deleteChannel, getAlbums, getAlbumSlides, getChannelStats } from '../services/api';
+import { Album, ChannelStats, Slide } from '../types';
 
 export function AdminPage() {
   const {
@@ -25,6 +25,8 @@ export function AdminPage() {
   const requestedAlbumsRef = useRef(new Set<number>());
   const [selectedForLink, setSelectedForLink] = useState<Set<number>>(new Set());
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [statsByChannel, setStatsByChannel] = useState<Record<number, ChannelStats>>({});
+  const [statsExpandedId, setStatsExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     getAlbums().then((response) => setAlbums(response.data));
@@ -87,6 +89,18 @@ export function AdminPage() {
       await loadSlidesFor(albumId);
     }
     setExpandedChannelId(channelId);
+  };
+
+  const toggleStats = async (channelId: number) => {
+    if (statsExpandedId === channelId) {
+      setStatsExpandedId(null);
+      return;
+    }
+    if (!statsByChannel[channelId]) {
+      const response = await getChannelStats(channelId);
+      setStatsByChannel((current) => ({ ...current, [channelId]: response.data }));
+    }
+    setStatsExpandedId(channelId);
   };
 
   const toggleSelectedForLink = (channelId: number) => {
@@ -214,6 +228,9 @@ export function AdminPage() {
                   <button onClick={() => toggleExpanded(channel.channelId, channel.currentAlbumId)}>
                     {expandedChannelId === channel.channelId ? 'Hide slides' : 'Jump to slide…'}
                   </button>
+                  <button onClick={() => toggleStats(channel.channelId)}>
+                    {statsExpandedId === channel.channelId ? 'Hide stats' : 'Stats'}
+                  </button>
                 </td>
                 <td>
                   <button onClick={() => deleteChannel(channel.channelId)}>Delete</button>
@@ -233,6 +250,35 @@ export function AdminPage() {
                         </li>
                       ))}
                     </ul>
+                  </td>
+                </tr>
+              )}
+              {statsExpandedId === channel.channelId && statsByChannel[channel.channelId] && (
+                <tr>
+                  <td colSpan={9}>
+                    <div className="admin-stats">
+                      <p>Total views: {statsByChannel[channel.channelId].totalViews}</p>
+                      <div>
+                        <strong>Most viewed:</strong>
+                        <ul>
+                          {statsByChannel[channel.channelId].topViewed.map((s) => (
+                            <li key={s.slideId}>
+                              Slide #{s.slideId} — {s.viewCount} views
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <strong>Least viewed:</strong>
+                        <ul>
+                          {statsByChannel[channel.channelId].leastViewed.map((s) => (
+                            <li key={s.slideId}>
+                              Slide #{s.slideId} — {s.viewCount} views
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}

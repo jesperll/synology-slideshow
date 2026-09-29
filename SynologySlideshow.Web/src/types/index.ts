@@ -64,3 +64,14 @@ export interface AdminSnapshot {
   anonymousCount: number;
   channels: AdminChannelEntry[];
 }
+
+export interface SlideViewStat {
+  slideId: number;
+  viewCount: number;
+}
+
+export interface ChannelStats {
+  totalViews: number;
+  topViewed: SlideViewStat[];
+  leastViewed: SlideViewStat[];
+}

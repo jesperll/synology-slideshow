@@ -253,4 +253,19 @@ describe('AdminPage', () => {
 
     expect(requestUnlink).toHaveBeenCalledWith(1);
   });
+
+  it('shows total views and top/least viewed slides when Stats is expanded', async () => {
+    mockHook();
+    vi.mocked(api.getChannelStats).mockResolvedValue({
+      data: { totalViews: 5, topViewed: [{ slideId: 10, viewCount: 3 }], leastViewed: [{ slideId: 20, viewCount: 2 }] }
+    } as any);
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Stats' })[0]);
+
+    expect(await screen.findByText('Total views: 5')).toBeInTheDocument();
+    expect(screen.getByText('Slide #10 — 3 views')).toBeInTheDocument();
+    expect(screen.getByText('Slide #20 — 2 views')).toBeInTheDocument();
+  });
 });

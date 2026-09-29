@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AdminSnapshot, Album, ChannelSummary, Slide } from '../types';
+import { AdminSnapshot, Album, ChannelStats, ChannelSummary, Slide } from '../types';
 
 const api = axios.create({
   baseURL: '/api'
@@ -17,3 +17,5 @@ export const createChannel = (name: string) => api.post<ChannelSummary>('/channe
 export const deleteChannel = (id: number) => api.delete(`/channels/${id}`);
 
 export const getAdminSnapshot = () => api.get<AdminSnapshot>('/admin/snapshot');
+
+export const getChannelStats = (channelId: number) => api.get<ChannelStats>(`/channels/${channelId}/stats`);
