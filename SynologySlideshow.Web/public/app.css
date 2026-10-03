@@ -961,9 +961,18 @@ h1:focus {
     max-width: 12rem;
     padding: 0.4rem 0.6rem;
     color: white;
-    background: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 0.4rem;
+}
+
+/* The select itself is styled above, but its open dropdown list is a native
+   popup that doesn't inherit the translucent background - without an explicit
+   background here it renders white-on-white (white text inherited, white/default
+   native popup background). */
+.admin-channel-table select option {
+    color: white;
+    background-color: #222;
 }
 
 .admin-channel-table button {
