@@ -13,7 +13,7 @@ describe('ChannelViewPresentation', () => {
   beforeEach(() => {
     vi.mocked(api.getAlbums).mockResolvedValue({ data: [] } as any);
     vi.mocked(api.getAlbumSlides).mockResolvedValue({
-      data: [{ id: 10, uri: '/img/10.jpg', description: '', location: '', date: '' }]
+      data: [{ id: 10, uri: '/img/10.jpg', description: '', location: 'Uddevalla, Sverige', date: '2026-07-16T20:09:53' }]
     } as any);
   });
 
@@ -29,6 +29,21 @@ describe('ChannelViewPresentation', () => {
     );
 
     await waitFor(() => expect(api.getAlbumSlides).toHaveBeenCalledWith(5));
+  });
+
+  it("shows the current slide's location and capture date in the lower-left corner", async () => {
+    render(
+      <ChannelViewPresentation
+        state={baseState}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText('Uddevalla, Sverige')).toBeInTheDocument();
+    expect(screen.getByText('16. juli 2026')).toBeInTheDocument();
   });
 
   it('resolves to no rendered slide if the pushed slide id is not in the album', async () => {

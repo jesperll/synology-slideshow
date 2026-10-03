@@ -7,6 +7,7 @@ import { useScreenWakeLock } from '../hooks/useScreenWakeLock';
 import { useTabVisibility } from '../hooks/useTabVisibility';
 import { SwipeArea } from './SwipeArea';
 import { Clock } from './Clock';
+import { SlideInfo } from './SlideInfo';
 import { SlideLayer } from './SlideLayer';
 import { OverlayMenu } from './OverlayMenu';
 import { JoinChannelPicker } from './JoinChannelPicker';
@@ -103,6 +104,7 @@ export function ChannelViewPresentation({
       )}
 
       <section className="full-screen scrim" onDoubleClick={openOverlay} />
+      {currentSlide && <SlideInfo slide={currentSlide} />}
       <Clock />
 
       {showOverlay && (
