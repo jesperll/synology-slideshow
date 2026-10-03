@@ -40,14 +40,12 @@ export function OverlayMenu({
           onSelectAlbum={onSelectAlbum}
         />
       ) : (
-        <>
-          <Settings
-            settings={settings}
-            onSettingsChange={onSettingsChange}
-            onClose={onClose}
-          />
-          {settingsFooter}
-        </>
+        <Settings
+          settings={settings}
+          onSettingsChange={onSettingsChange}
+          onClose={onClose}
+          channelFooter={settingsFooter}
+        />
       )}
     </section>
   );
