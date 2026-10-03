@@ -25,7 +25,6 @@ describe('ChannelView', () => {
       requestNext: vi.fn(),
       requestPrevious: vi.fn(),
       requestJump: vi.fn(),
-      requestTogglePause: vi.fn(),
       requestSwitchAlbum: vi.fn()
     });
 
@@ -48,7 +47,6 @@ describe('ChannelView', () => {
       requestNext: vi.fn(),
       requestPrevious: vi.fn(),
       requestJump: vi.fn(),
-      requestTogglePause: vi.fn(),
       requestSwitchAlbum: vi.fn()
     });
 

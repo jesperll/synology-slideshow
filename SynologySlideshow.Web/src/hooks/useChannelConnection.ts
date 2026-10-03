@@ -32,7 +32,6 @@ export interface ChannelConnectionResult {
   requestNext(): Promise<void>;
   requestPrevious(): Promise<void>;
   requestJump(slideId: number): Promise<void>;
-  requestTogglePause(): Promise<void>;
   requestSwitchAlbum(albumId: number): Promise<void>;
 }
 
@@ -146,7 +145,6 @@ export function useChannelConnection(channelName: string, factory: ConnectionFac
     requestNext: withChannelId((c, id) => c.invoke('RequestNextSlide', id)),
     requestPrevious: withChannelId((c, id) => c.invoke('RequestPreviousSlide', id)),
     requestJump: (slideId: number) => withChannelId((c, id) => c.invoke('RequestJumpToSlide', id, slideId))(),
-    requestTogglePause: withChannelId((c, id) => c.invoke('RequestTogglePause', id)),
     requestSwitchAlbum: (albumId: number) => withChannelId((c, id) => c.invoke('RequestSwitchAlbum', id, albumId))()
   };
 }

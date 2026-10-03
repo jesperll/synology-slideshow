@@ -245,10 +245,10 @@ describe('useChannelConnection', () => {
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
 
-    fake.failingMethods.add('RequestTogglePause');
+    fake.failingMethods.add('RequestNextSlide');
     fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 12, isPaused: true, isDefault: false };
     await act(async () => {
-      await expect(result.current.requestTogglePause()).resolves.toBeUndefined();
+      await expect(result.current.requestNext()).resolves.toBeUndefined();
     });
 
     expect(result.current.state?.currentSlideId).toBe(12);

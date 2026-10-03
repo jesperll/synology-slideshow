@@ -23,7 +23,6 @@ describe('ChannelViewPresentation', () => {
         state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={vi.fn()}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
@@ -40,7 +39,6 @@ describe('ChannelViewPresentation', () => {
         state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={vi.fn()}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
@@ -55,14 +53,12 @@ describe('ChannelViewPresentation', () => {
     expect(container.querySelectorAll('[style*="background-image"]').length).toBe(0);
   });
 
-  it('opens the overlay and requests a pause toggle on local double-click', () => {
-    const onTogglePause = vi.fn();
+  it('opens the overlay on local double-click without affecting the shared channel', () => {
     const { container } = render(
       <ChannelViewPresentation
         state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={onTogglePause}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
@@ -70,67 +66,44 @@ describe('ChannelViewPresentation', () => {
 
     fireEvent.doubleClick(container.querySelector('.scrim')!);
 
-    expect(onTogglePause).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
   });
 
-  it('opens the overlay without toggling pause when the channel is already paused', () => {
-    const onTogglePause = vi.fn();
+  it('keeps rendering the current slide behind the overlay once it is open', async () => {
     const { container } = render(
       <ChannelViewPresentation
-        state={{ ...baseState, isPaused: true }}
+        state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={onTogglePause}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
     );
+    await waitFor(() => expect(api.getAlbumSlides).toHaveBeenCalled());
 
     fireEvent.doubleClick(container.querySelector('.scrim')!);
 
-    expect(onTogglePause).not.toHaveBeenCalled();
+    // Opening settings must not hide, unmount, or otherwise stop the slide showing behind it -
+    // the slideshow keeps playing for this viewer and everyone else on the channel.
     expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
+    expect(container.querySelectorAll('[style*="background-image"]').length).toBeGreaterThan(0);
   });
 
-  it('opens the overlay and pauses when the channel is playing', () => {
-    const onTogglePause = vi.fn();
-    const { container } = render(
-      <ChannelViewPresentation
-        state={{ ...baseState, isPaused: false }}
-        onNext={vi.fn()}
-        onPrevious={vi.fn()}
-        onTogglePause={onTogglePause}
-        onSwitchAlbum={vi.fn()}
-        onLeave={vi.fn()}
-      />
-    );
-
-    fireEvent.doubleClick(container.querySelector('.scrim')!);
-
-    expect(onTogglePause).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
-  });
-
-  it('Space opens the overlay without re-toggling an existing pause, and a second Space closes it and unpauses', () => {
-    const onTogglePause = vi.fn();
+  it('Space opens the overlay, and a second Space closes it', () => {
     render(
       <ChannelViewPresentation
-        state={{ ...baseState, isPaused: true }}
+        state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={onTogglePause}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
     );
 
     fireEvent.keyDown(window, { code: 'Space' });
-    expect(onTogglePause).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
 
     fireEvent.keyDown(window, { code: 'Space' });
-    expect(onTogglePause).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
   });
 
@@ -140,7 +113,6 @@ describe('ChannelViewPresentation', () => {
         state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={vi.fn()}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
@@ -151,59 +123,11 @@ describe('ChannelViewPresentation', () => {
         state={{ ...baseState, isPaused: true }}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={vi.fn()}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />
     );
 
-    expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
-  });
-
-  it('unpauses when the overlay menu is closed while the channel is paused', () => {
-    const onTogglePause = vi.fn();
-    const { container } = render(
-      <ChannelViewPresentation
-        state={{ ...baseState, isPaused: true }}
-        onNext={vi.fn()}
-        onPrevious={vi.fn()}
-        onTogglePause={onTogglePause}
-        onSwitchAlbum={vi.fn()}
-        onLeave={vi.fn()}
-      />
-    );
-
-    // Open the overlay locally (mirrors the "double-click to open" gesture).
-    fireEvent.doubleClick(container.querySelector('.scrim')!);
-    onTogglePause.mockClear();
-
-    // Dismiss via OverlayMenu's own close affordance (double-click inside the menu),
-    // the same gesture a viewer uses to dismiss the settings/album grid.
-    fireEvent.doubleClick(container.querySelector('.overlay-menu')!);
-
-    expect(onTogglePause).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
-  });
-
-  it('does not toggle pause again when the overlay menu is closed while already unpaused', () => {
-    const onTogglePause = vi.fn();
-    const { container } = render(
-      <ChannelViewPresentation
-        state={baseState}
-        onNext={vi.fn()}
-        onPrevious={vi.fn()}
-        onTogglePause={onTogglePause}
-        onSwitchAlbum={vi.fn()}
-        onLeave={vi.fn()}
-      />
-    );
-
-    fireEvent.doubleClick(container.querySelector('.scrim')!);
-    onTogglePause.mockClear();
-
-    fireEvent.doubleClick(container.querySelector('.overlay-menu')!);
-
-    expect(onTogglePause).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
   });
 
@@ -215,7 +139,6 @@ describe('ChannelViewPresentation', () => {
           state={{ ...baseState, isDefault: true }}
           onNext={vi.fn()}
           onPrevious={vi.fn()}
-          onTogglePause={vi.fn()}
           onSwitchAlbum={vi.fn()}
           onLeave={vi.fn()}
         />
@@ -235,7 +158,6 @@ describe('ChannelViewPresentation', () => {
         state={baseState}
         onNext={vi.fn()}
         onPrevious={vi.fn()}
-        onTogglePause={vi.fn()}
         onSwitchAlbum={vi.fn()}
         onLeave={vi.fn()}
       />

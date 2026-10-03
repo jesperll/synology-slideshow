@@ -15,7 +15,6 @@ interface ChannelViewPresentationProps {
   state: ChannelState;
   onNext: () => void;
   onPrevious: () => void;
-  onTogglePause: () => void;
   onSwitchAlbum: (albumId: number) => void;
   onLeave: () => void;
 }
@@ -24,7 +23,6 @@ export function ChannelViewPresentation({
   state,
   onNext,
   onPrevious,
-  onTogglePause,
   onSwitchAlbum,
   onLeave
 }: ChannelViewPresentationProps) {
@@ -57,17 +55,12 @@ export function ChannelViewPresentation({
       .catch((error) => console.error('Failed to load album slides:', error));
   }, [state.currentAlbumId, state.currentSlideId]);
 
-  // Pause is shared across every viewer of the channel, so only toggle it when it isn't
-  // already in the state we want (it may have been paused/unpaused remotely).
-  const openOverlay = () => {
-    setShowOverlay(true);
-    if (!state.isPaused) onTogglePause();
-  };
-
-  const closeOverlay = () => {
-    setShowOverlay(false);
-    if (state.isPaused) onTogglePause();
-  };
+  // Showing settings is purely a local overlay - it must never pause the channel, since
+  // pause/play is shared across every viewer (and now also driven automatically by viewer
+  // presence), so one device opening its own settings would stop the slideshow for everyone
+  // else watching too. The slide underneath keeps advancing while the overlay is shown.
+  const openOverlay = () => setShowOverlay(true);
+  const closeOverlay = () => setShowOverlay(false);
 
   const handleSwipe = (direction: SwipeDirection) => {
     switch (direction) {
@@ -78,12 +71,10 @@ export function ChannelViewPresentation({
         onNext();
         break;
       case SwipeDirection.TopToBottom:
-        setShowOverlay(true);
-        if (!state.isPaused) onTogglePause();
+        openOverlay();
         break;
       case SwipeDirection.BottomToTop:
-        setShowOverlay(false);
-        if (state.isPaused) onTogglePause();
+        closeOverlay();
         break;
     }
   };

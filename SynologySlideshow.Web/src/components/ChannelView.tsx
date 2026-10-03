@@ -31,7 +31,6 @@ export function ChannelView() {
       state={connection.state}
       onNext={connection.requestNext}
       onPrevious={connection.requestPrevious}
-      onTogglePause={connection.requestTogglePause}
       onSwitchAlbum={connection.requestSwitchAlbum}
       onLeave={() => {
         forgetChannel();
