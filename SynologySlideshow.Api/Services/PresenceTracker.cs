@@ -7,23 +7,33 @@ public class PresenceTracker
     private readonly ConcurrentDictionary<string, int> _connectionChannel = new();
     private readonly ConcurrentDictionary<int, int> _viewerCounts = new();
 
-    public void OnDisconnected(string connectionId)
+    // Returns the channel the connection was on, if any, so the caller can react if that
+    // channel's viewer count just dropped to zero (e.g. stop its advance timer).
+    public int? OnDisconnected(string connectionId)
     {
         if (_connectionChannel.TryRemove(connectionId, out var channelId))
         {
             _viewerCounts.AddOrUpdate(channelId, 0, (_, count) => Math.Max(0, count - 1));
+            return channelId;
         }
+        return null;
     }
 
-    public void OnJoinedChannel(string connectionId, int channelId)
+    // Returns the channel the connection was previously on, if it switched channels without
+    // an explicit leave, so the caller can react if that old channel's count just dropped to
+    // zero (e.g. stop its advance timer).
+    public int? OnJoinedChannel(string connectionId, int channelId)
     {
+        int? previousChannelId = null;
         if (_connectionChannel.TryGetValue(connectionId, out var existingChannelId))
         {
-            if (existingChannelId == channelId) return; // already counted for this channel; no-op
+            if (existingChannelId == channelId) return null; // already counted for this channel; no-op
             _viewerCounts.AddOrUpdate(existingChannelId, 0, (_, count) => Math.Max(0, count - 1));
+            previousChannelId = existingChannelId;
         }
         _connectionChannel[connectionId] = channelId;
         _viewerCounts.AddOrUpdate(channelId, 1, (_, count) => count + 1);
+        return previousChannelId;
     }
 
     public void OnLeftChannel(string connectionId, int channelId)

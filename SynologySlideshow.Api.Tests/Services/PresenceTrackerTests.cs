@@ -71,6 +71,59 @@ public class PresenceTrackerTests
     }
 
     [Fact]
+    public void JoiningAFreshChannelReturnsNoPreviousChannel()
+    {
+        var tracker = new PresenceTracker();
+
+        var previous = tracker.OnJoinedChannel("A", channelId: 1);
+
+        Assert.Null(previous);
+    }
+
+    [Fact]
+    public void JoiningTheSameChannelAgainReturnsNoPreviousChannel()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnJoinedChannel("A", channelId: 1);
+
+        var previous = tracker.OnJoinedChannel("A", channelId: 1);
+
+        Assert.Null(previous);
+    }
+
+    [Fact]
+    public void SwitchingChannelsReturnsThePreviousChannelId()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnJoinedChannel("A", channelId: 1);
+
+        var previous = tracker.OnJoinedChannel("A", channelId: 2);
+
+        Assert.Equal(1, previous);
+    }
+
+    [Fact]
+    public void DisconnectingAnUntrackedConnectionReturnsNull()
+    {
+        var tracker = new PresenceTracker();
+
+        var left = tracker.OnDisconnected("never-joined");
+
+        Assert.Null(left);
+    }
+
+    [Fact]
+    public void DisconnectingAJoinedConnectionReturnsItsChannelId()
+    {
+        var tracker = new PresenceTracker();
+        tracker.OnJoinedChannel("A", channelId: 1);
+
+        var left = tracker.OnDisconnected("A");
+
+        Assert.Equal(1, left);
+    }
+
+    [Fact]
     public void LeavingWithAMismatchedChannelIdDoesNotCorruptAnyCount()
     {
         var tracker = new PresenceTracker();

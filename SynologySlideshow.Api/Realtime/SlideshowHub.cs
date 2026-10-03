@@ -33,7 +33,8 @@ public class SlideshowHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _presence.OnDisconnected(Context.ConnectionId);
+        var leftChannelId = _presence.OnDisconnected(Context.ConnectionId);
+        if (leftChannelId is int id) SyncTimersForGroup(id);
         await BroadcastPresenceAsync();
         await base.OnDisconnectedAsync(exception);
     }
@@ -51,7 +52,9 @@ public class SlideshowHub : Hub
         if (channel == null) return null;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(channel.Id));
-        _presence.OnJoinedChannel(Context.ConnectionId, channel.Id);
+        var previousChannelId = _presence.OnJoinedChannel(Context.ConnectionId, channel.Id);
+        SyncTimersForGroup(channel.Id);
+        if (previousChannelId is int previousId) SyncTimersForGroup(previousId);
         await BroadcastPresenceAsync();
         return await _playback.GetStateAsync(channel.Id);
     }
@@ -60,6 +63,7 @@ public class SlideshowHub : Hub
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(channelId));
         _presence.OnLeftChannel(Context.ConnectionId, channelId);
+        SyncTimersForGroup(channelId);
         await BroadcastPresenceAsync();
     }
 
@@ -78,6 +82,13 @@ public class SlideshowHub : Hub
         var result = await _playback.LinkAsync(channelIds);
         if (result.Success)
         {
+            // Linking can give a previously-idle (0-viewer) member a group that now has
+            // viewers via its new groupmates, or vice versa for an unlinked member - re-sync
+            // every affected channel's timer rather than just the ones passed in.
+            foreach (var id in channelIds)
+            {
+                SyncTimersForGroup(id);
+            }
             await BroadcastPresenceAsync();
         }
         return result;
@@ -86,8 +97,27 @@ public class SlideshowHub : Hub
     public async Task<ChannelStateDto> RequestUnlinkChannel(int channelId)
     {
         var state = await _playback.UnlinkAsync(channelId);
+        SyncTimersForGroup(channelId);
         await BroadcastPresenceAsync();
         return state;
+    }
+
+    // A channel's advance timer should only run while someone is actually watching - either
+    // this channel directly, or (for a sync-linked group) any of its groupmates, since a
+    // linked group's lowest-id member drives the whole group's advance regardless of which
+    // member's viewers keep it alive. Running the timer with nobody watching wastes work and
+    // inflates view stats for slides nobody saw; this does not touch the admin-facing
+    // IsPaused flag, so an admin's manual pause/play and manual Next/Previous keep working
+    // regardless of viewer count.
+    private void SyncTimersForGroup(int channelId)
+    {
+        var members = _playback.GetGroupMembers(channelId);
+        var totalViewers = members.Sum(_presence.GetViewerCount);
+        foreach (var id in members)
+        {
+            if (totalViewers == 0) _playback.StopTimer(id);
+            else _playback.StartTimer(id);
+        }
     }
 
     // Presence broadcasts are best-effort: a failure here must never abort the caller's

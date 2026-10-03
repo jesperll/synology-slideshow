@@ -82,7 +82,8 @@ public class ChannelsController : ControllerBase
             return Conflict($"A channel named '{name}' already exists.");
         }
 
-        _playback.StartTimer(channel.Id);
+        // No StartTimer here: a freshly created channel has no viewers yet, and
+        // SlideshowHub starts its timer as soon as the first one joins.
         await BroadcastPresenceAsync();
         return CreatedAtAction(nameof(List), new ChannelSummary { Id = channel.Id, Name = channel.Name });
     }

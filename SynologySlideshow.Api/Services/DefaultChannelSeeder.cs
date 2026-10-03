@@ -3,18 +3,20 @@ using SynologySlideshow.Api.Data;
 
 namespace SynologySlideshow.Api.Services;
 
-public class ChannelTimerStartup : IHostedService
+// Ensures the permanent, non-deletable "Default" channel exists. Channel advance timers are
+// no longer started here: SlideshowHub starts a channel's timer as soon as its first viewer
+// joins (see SyncTimersForGroup), since a channel with nobody watching has no timer to start
+// at boot anyway.
+public class DefaultChannelSeeder : IHostedService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ChannelPlaybackService _playback;
+    public const string DefaultChannelName = "Default";
 
-    public ChannelTimerStartup(IServiceScopeFactory scopeFactory, ChannelPlaybackService playback)
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    public DefaultChannelSeeder(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
-        _playback = playback;
     }
-
-    public const string DefaultChannelName = "Default";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -30,12 +32,6 @@ public class ChannelTimerStartup : IHostedService
                 IsDefault = true
             });
             await db.SaveChangesAsync(cancellationToken);
-        }
-
-        var ids = await db.Channels.Select(c => c.Id).ToListAsync(cancellationToken);
-        foreach (var id in ids)
-        {
-            _playback.StartTimer(id);
         }
     }
 

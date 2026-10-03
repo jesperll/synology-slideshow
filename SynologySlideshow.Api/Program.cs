@@ -44,7 +44,7 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<ISlideSource, SlideShowSlideSource>();
 builder.Services.AddSingleton<SyncGroupService>();
 builder.Services.AddSingleton<ChannelPlaybackService>();
-builder.Services.AddHostedService<ChannelTimerStartup>();
+builder.Services.AddHostedService<DefaultChannelSeeder>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddScoped<AdminSnapshotService>();
 builder.Services.AddSingleton<ViewStatsService>();

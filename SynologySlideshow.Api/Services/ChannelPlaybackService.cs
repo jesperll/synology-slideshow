@@ -161,6 +161,8 @@ public class ChannelPlaybackService
         }
     }
 
+    public bool IsTimerRunning(int channelId) => _timers.ContainsKey(channelId);
+
     public void ResetTimer(int channelId)
     {
         if (_timers.TryGetValue(channelId, out var timer))
