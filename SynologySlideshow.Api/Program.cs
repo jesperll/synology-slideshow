@@ -48,6 +48,7 @@ builder.Services.AddHostedService<DefaultChannelSeeder>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddScoped<AdminSnapshotService>();
 builder.Services.AddSingleton<ViewStatsService>();
+builder.Services.AddHostedService<MidnightRefreshService>();
 
 var app = builder.Build();
 

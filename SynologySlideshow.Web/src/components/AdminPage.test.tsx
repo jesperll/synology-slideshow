@@ -34,6 +34,7 @@ describe('AdminPage', () => {
     vi.mocked(api.getAlbums).mockResolvedValue({ data: [{ id: 5, name: 'Holiday', thumbnail: '' }] } as any);
     vi.mocked(api.createChannel).mockResolvedValue({ data: { id: 2, name: 'bedroom' } } as any);
     vi.mocked(api.deleteChannel).mockReset().mockResolvedValue({} as any);
+    vi.mocked(api.refreshLibrary).mockReset().mockResolvedValue({} as any);
     vi.mocked(api.getAlbumSlides).mockResolvedValue({
       data: [
         { id: 10, uri: '/api/albums/5/slides/10.jpg', thumbnailUri: '/api/albums/5/slides/10/thumbnail.jpg', description: '', location: '', date: '' },
@@ -155,6 +156,46 @@ describe('AdminPage', () => {
     expect(api.deleteChannel).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+  });
+
+  it('refreshes the library and shows a success message', async () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh library' }));
+
+    await waitFor(() => expect(api.refreshLibrary).toHaveBeenCalled());
+    expect(await screen.findByText('Library refreshed.')).toBeInTheDocument();
+  });
+
+  it('disables the refresh button while the request is in flight', async () => {
+    mockHook();
+    let resolveRefresh!: () => void;
+    vi.mocked(api.refreshLibrary).mockReturnValue(
+      new Promise((resolve) => {
+        resolveRefresh = () => resolve({} as any);
+      })
+    );
+
+    render(<AdminPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh library' }));
+
+    expect(screen.getByRole('button', { name: 'Refreshing…' })).toBeDisabled();
+
+    resolveRefresh();
+    await screen.findByRole('button', { name: 'Refresh library' });
+  });
+
+  it('shows an error message when the refresh request fails', async () => {
+    mockHook();
+    vi.mocked(api.refreshLibrary).mockRejectedValue(new Error('network down'));
+
+    render(<AdminPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh library' }));
+
+    expect(await screen.findByText('Could not refresh the library.')).toBeInTheDocument();
+    expect(screen.queryByText('Library refreshed.')).not.toBeInTheDocument();
   });
 
   it('removes the row once the live snapshot no longer includes the channel', () => {

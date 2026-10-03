@@ -22,6 +22,11 @@ public class SlideShowService
         SlideShow = slideShow;
     }
 
+    // Re-fetches every album and slide from Synology, so newly-added or removed photos are
+    // picked up without restarting the process. Called by MidnightRefreshService on a timer
+    // and by AdminController's manual refresh endpoint.
+    public virtual Task RefreshAsync() => SlideShow.Refresh();
+
     public SlideShow SlideShow { get; private set; } = null!;
 }
 

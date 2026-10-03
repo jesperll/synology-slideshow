@@ -1,7 +1,7 @@
 import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAdminConnection } from '../hooks/useAdminConnection';
-import { createChannel, deleteChannel, getAlbums, getAlbumSlides, getChannelStats } from '../services/api';
+import { createChannel, deleteChannel, getAlbums, getAlbumSlides, getChannelStats, refreshLibrary } from '../services/api';
 import { Album, ChannelStats, Slide } from '../types';
 
 export function AdminPage() {
@@ -29,6 +29,9 @@ export function AdminPage() {
   const [statsExpandedId, setStatsExpandedId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshedJustNow, setRefreshedJustNow] = useState(false);
 
   useEffect(() => {
     getAlbums().then((response) => setAlbums(response.data));
@@ -142,6 +145,20 @@ export function AdminPage() {
     cancelDelete();
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setRefreshError(null);
+    setRefreshedJustNow(false);
+    try {
+      await refreshLibrary();
+      setRefreshedJustNow(true);
+    } catch {
+      setRefreshError('Could not refresh the library.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (!snapshot) {
     return <p>Loading…</p>;
   }
@@ -149,6 +166,14 @@ export function AdminPage() {
   return (
     <div className="admin-page">
       <h1>Channels</h1>
+
+      <div className="admin-refresh-bar">
+        <button onClick={handleRefresh} disabled={isRefreshing}>
+          {isRefreshing ? 'Refreshing…' : 'Refresh library'}
+        </button>
+        {refreshedJustNow && <span className="admin-refresh-success">Library refreshed.</span>}
+        {refreshError && <span className="admin-error">{refreshError}</span>}
+      </div>
 
       <form onSubmit={handleCreate}>
         <input

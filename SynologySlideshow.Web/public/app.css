@@ -922,6 +922,18 @@ h1:focus {
     margin-bottom: 1.5rem;
 }
 
+.admin-refresh-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-refresh-success {
+    color: #4ade80;
+    font-size: 0.9rem;
+}
+
 .admin-channel-table {
     width: 100%;
     border-collapse: collapse;
