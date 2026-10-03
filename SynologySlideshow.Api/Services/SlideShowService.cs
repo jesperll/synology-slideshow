@@ -59,7 +59,7 @@ public class SlideShow
         foreach (var album in albums)
         {
             var slides = await _source.GetSlides(album);
-            //Shuffle(slides);
+            Shuffle(slides);
             dict.Add(album, slides);
         }
         _dict = dict;
