@@ -229,6 +229,61 @@ describe('AdminPage', () => {
     expect(api.getAlbumSlides).toHaveBeenCalledWith(5);
   });
 
+  it('shows lazy-loaded thumbnails for every slide in the jump-to-slide grid', async () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jump to slide…' }));
+
+    const images = await waitFor(() => {
+      const found = document.querySelectorAll('.admin-slide-grid img');
+      expect(found).toHaveLength(2);
+      return found;
+    });
+    expect(images[0]).toHaveAttribute('src', '/api/albums/5/slides/10/thumbnail.jpg');
+    expect(images[0]).toHaveAttribute('loading', 'lazy');
+    expect(images[1]).toHaveAttribute('src', '/api/albums/5/slides/11/thumbnail.jpg');
+    expect(images[1]).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('marks the current slide as selected and jumps to the clicked slide', async () => {
+    const requestJump = vi.fn();
+    mockHook({ requestJump });
+
+    render(<AdminPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jump to slide…' }));
+
+    const buttons = await waitFor(() => {
+      const found = document.querySelectorAll('.admin-slide-grid button');
+      expect(found).toHaveLength(2);
+      return found;
+    });
+    expect(buttons[0]).toHaveClass('selected'); // slide 10 is the channel's currentSlideId
+    expect(buttons[1]).not.toHaveClass('selected');
+
+    fireEvent.click(buttons[1]);
+    expect(requestJump).toHaveBeenCalledWith(1, 11);
+  });
+
+  it('scrolls the current slide into view when the grid opens', async () => {
+    mockHook();
+    const original = Element.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(<AdminPage />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Jump to slide…' }));
+
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' }));
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('shows no current-slide thumbnail when the channel has no current slide', async () => {
     mockHook({
       snapshot: {

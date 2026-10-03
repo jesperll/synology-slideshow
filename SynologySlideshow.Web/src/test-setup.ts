@@ -10,6 +10,12 @@ afterEach(() => {
   cleanup();
 });
 
+// jsdom doesn't implement scrollIntoView at all; anything that calls it (e.g. scrolling the
+// admin jump-to-slide grid to the current slide) throws "not a function" without this.
+if (typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Ensure localStorage is available in test environment
 if (typeof localStorage === 'undefined') {
   const localStorageData: Record<string, string> = {};

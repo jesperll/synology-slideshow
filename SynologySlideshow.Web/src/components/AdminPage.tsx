@@ -32,6 +32,15 @@ export function AdminPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshedJustNow, setRefreshedJustNow] = useState(false);
+  // Points at whichever slide-grid button is currently marked "selected", so the grid can
+  // scroll to it as soon as it opens instead of leaving the admin to hunt for it.
+  const selectedSlideRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (expandedChannelId !== null) {
+      selectedSlideRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [expandedChannelId]);
 
   useEffect(() => {
     getAlbums().then((response) => setAlbums(response.data));
@@ -312,15 +321,20 @@ export function AdminPage() {
                 <tr>
                   <td colSpan={9}>
                     <ul className="admin-slide-grid">
-                      {(slidesByAlbum[channel.currentAlbumId] ?? []).map((slide) => (
-                        <li key={slide.id}>
-                          <button
-                            className={slide.id === channel.currentSlideId ? 'selected' : ''}
-                            style={{ backgroundImage: `url('${slide.thumbnailUri}')` }}
-                            onClick={() => requestJump(channel.channelId, slide.id)}
-                          />
-                        </li>
-                      ))}
+                      {(slidesByAlbum[channel.currentAlbumId] ?? []).map((slide) => {
+                        const isSelected = slide.id === channel.currentSlideId;
+                        return (
+                          <li key={slide.id}>
+                            <button
+                              ref={isSelected ? selectedSlideRef : undefined}
+                              className={isSelected ? 'selected' : ''}
+                              onClick={() => requestJump(channel.channelId, slide.id)}
+                            >
+                              <img src={slide.thumbnailUri} loading="lazy" alt="" />
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </td>
                 </tr>
