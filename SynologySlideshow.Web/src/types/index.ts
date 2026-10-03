@@ -7,6 +7,7 @@ export interface Album {
 export interface Slide {
   id: number;
   uri: string;
+  thumbnailUri: string;
   description: string;
   location: string;
   date: string;

@@ -207,7 +207,7 @@ export function AdminPage() {
                     return slide ? (
                       <img
                         className="admin-current-slide"
-                        src={slide.uri}
+                        src={slide.thumbnailUri}
                         alt={`Current slide of ${channel.name}`}
                         style={{ width: 80, height: 60, objectFit: 'cover' }}
                       />
@@ -249,7 +249,7 @@ export function AdminPage() {
                         <li key={slide.id}>
                           <button
                             className={slide.id === channel.currentSlideId ? 'selected' : ''}
-                            style={{ backgroundImage: `url('${slide.uri}')` }}
+                            style={{ backgroundImage: `url('${slide.thumbnailUri}')` }}
                             onClick={() => requestJump(channel.channelId, slide.id)}
                           />
                         </li>

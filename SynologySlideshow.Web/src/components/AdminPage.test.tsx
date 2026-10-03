@@ -37,8 +37,8 @@ describe('AdminPage', () => {
     vi.mocked(api.deleteChannel).mockResolvedValue({} as any);
     vi.mocked(api.getAlbumSlides).mockResolvedValue({
       data: [
-        { id: 10, uri: '/api/albums/5/slides/10.jpg', description: '', location: '', date: '' },
-        { id: 11, uri: '/api/albums/5/slides/11.jpg', description: '', location: '', date: '' }
+        { id: 10, uri: '/api/albums/5/slides/10.jpg', thumbnailUri: '/api/albums/5/slides/10/thumbnail.jpg', description: '', location: '', date: '' },
+        { id: 11, uri: '/api/albums/5/slides/11.jpg', thumbnailUri: '/api/albums/5/slides/11/thumbnail.jpg', description: '', location: '', date: '' }
       ]
     } as any);
   });
@@ -145,7 +145,7 @@ describe('AdminPage', () => {
     render(<AdminPage />);
 
     const thumbnail = await screen.findByAltText('Current slide of kitchen');
-    expect(thumbnail).toHaveAttribute('src', '/api/albums/5/slides/10.jpg');
+    expect(thumbnail).toHaveAttribute('src', '/api/albums/5/slides/10/thumbnail.jpg');
     expect(api.getAlbumSlides).toHaveBeenCalledWith(5);
   });
 

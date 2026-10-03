@@ -141,18 +141,19 @@ public class SynologyAlbumSource
                     }).Where(x => !string.IsNullOrEmpty(x)).Distinct())
                 }
                 where p.Type is "photo" or "live"
-                let thumb = GetThumbnailUri(p.Additional.Thumbnail, album.Passphrase)
-                select p.Extend(thumb, location, n)).ToArray();
+                let full = GetThumbnailUri(p.Additional.Thumbnail, album.Passphrase)
+                let thumb = GetThumbnailUri(p.Additional.Thumbnail, album.Passphrase, "sm")
+                select p.Extend(full, thumb, location, n)).ToArray();
     }
 
-    public string GetThumbnailUri(PhotoThumbnail thumb, string passphrase)
+    public string GetThumbnailUri(PhotoThumbnail thumb, string passphrase, string size = "xl")
     {
         return BuildUri("SYNO.FotoTeam.Thumbnail", 2, "get", new Dictionary<string, string>
         {
             { "id", thumb.UnitId.ToString() },
             { "cache_key", thumb.CacheKey },
             { "type", "unit" },
-            { "size", "xl" },
+            { "size", size },
             { "passphrase", passphrase },
         });
     }

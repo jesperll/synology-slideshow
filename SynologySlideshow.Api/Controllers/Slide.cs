@@ -7,4 +7,5 @@ public class Slide
     public string? Description { get; set; }
     public string? Location { get; set; }
     public string? Uri { get; set; }
+    public string? ThumbnailUri { get; set; }
 }

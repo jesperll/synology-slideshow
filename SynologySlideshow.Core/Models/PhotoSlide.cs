@@ -9,9 +9,10 @@ public class PhotoSlide : Photo
     [JsonPropertyName("additional")]
     public PhotoAdditional Additional { get; set; } = null!;
 
-    public PhotoSlide Extend(string uri, string? location, JsonNode debugInfo)
+    public PhotoSlide Extend(string uri, string thumbnailUri, string? location, JsonNode debugInfo)
     {
         Uri = uri;
+        ThumbnailUri = thumbnailUri;
         Location = location.NullIfEmpty();
         DebugInfo = debugInfo;
         return this;
@@ -19,6 +20,9 @@ public class PhotoSlide : Photo
 
     [JsonPropertyName("uri")]
     public string Uri { get; private set; } = null!;
+
+    [JsonPropertyName("thumbnailUri")]
+    public string ThumbnailUri { get; private set; } = null!;
 
     [JsonPropertyName("date")]
     public DateTime Date => DateTimeOffset.FromUnixTimeSeconds(Time).DateTime;
