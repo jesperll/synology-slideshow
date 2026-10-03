@@ -230,15 +230,15 @@ export function AdminPage() {
                     />
                   )}
                 </td>
-                <td>
+                <td data-label="Name">
                   <a href={`/${channel.name}`} target="_blank" rel="noopener noreferrer">
                     {channel.name}
                   </a>
                   {channel.isDefault && ' (default)'}
                 </td>
-                <td>{channel.viewerCount}</td>
-                <td>{channel.isPaused ? 'Paused' : 'Playing'}</td>
-                <td>
+                <td data-label="Viewers">{channel.viewerCount}</td>
+                <td data-label="Status">{channel.isPaused ? 'Paused' : 'Playing'}</td>
+                <td data-label="Album">
                   <select
                     value={channel.currentAlbumId ?? ''}
                     onChange={(e) => requestSwitchAlbum(channel.channelId, Number(e.target.value))}
@@ -253,7 +253,7 @@ export function AdminPage() {
                     ))}
                   </select>
                 </td>
-                <td>
+                <td data-label="Current Slide">
                   {(() => {
                     const slide = currentSlide(channel.currentAlbumId, channel.currentSlideId);
                     return slide ? (
@@ -266,7 +266,7 @@ export function AdminPage() {
                     ) : null;
                   })()}
                 </td>
-                <td>
+                <td data-label="Linked with">
                   {channel.linkedChannelIds.length === 0 ? (
                     '—'
                   ) : (
@@ -276,7 +276,7 @@ export function AdminPage() {
                     </>
                   )}
                 </td>
-                <td>
+                <td data-label="Controls">
                   <button
                     onClick={() => requestTogglePause(channel.channelId)}
                     disabled={channel.viewerCount === 0}

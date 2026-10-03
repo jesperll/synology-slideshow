@@ -1121,3 +1121,79 @@ h1:focus {
     color: rgba(255, 255, 255, 0.85);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+/* Below this width the channel table reflows into one stacked card per channel - a 9-column
+   table has no reasonable fit on a phone, scrolling it sideways is unpleasant to use, and the
+   Controls cell's five buttons need their own full-width row to wrap sensibly anyway. */
+@media (max-width: 768px) {
+    .admin-page {
+        padding: 1.5rem 1rem 3rem;
+    }
+
+    .admin-page form input {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .admin-channel-table thead {
+        display: none;
+    }
+
+    .admin-channel-table,
+    .admin-channel-table tbody,
+    .admin-channel-table tr,
+    .admin-channel-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-channel-table tr {
+        margin-bottom: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .admin-channel-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .admin-channel-table td {
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .admin-channel-table tr > td:last-child {
+        border-bottom: none;
+    }
+
+    .admin-channel-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.3rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .admin-channel-table select {
+        max-width: none;
+        width: 100%;
+    }
+
+    .admin-delete-confirm {
+        flex-wrap: wrap;
+    }
+
+    .admin-delete-confirm input {
+        width: 100%;
+    }
+
+    .admin-slide-grid {
+        grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+    }
+}
