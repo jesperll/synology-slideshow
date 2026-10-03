@@ -56,7 +56,8 @@ public class ApiController : ControllerBase
             Date = s.Date,
             Description = s.Description,
             Location = s.Location,
-            Uri = Url.RouteUrl("SlidePhoto", new { id = id, slide = s.Id })
+            Uri = Url.RouteUrl("SlidePhoto", new { id = id, slide = s.Id }),
+            ThumbnailUri = Url.RouteUrl("SlideThumbnail", new { id = id, slide = s.Id })
         }));
     }
 
@@ -66,5 +67,13 @@ public class ApiController : ControllerBase
         var a = _source.GetSlide(id, slide);
         if (a == null) return NotFound();
         return File(await _client.GetStreamAsync(a.Uri), "image/jpeg");
+    }
+
+    [HttpGet("albums/{id}/slides/{slide}/thumbnail.jpg", Name = "SlideThumbnail")]
+    public async Task<IActionResult> SlideThumbnail(int id, int slide)
+    {
+        var a = _source.GetSlide(id, slide);
+        if (a == null) return NotFound();
+        return File(await _client.GetStreamAsync(a.ThumbnailUri), "image/jpeg");
     }
 }

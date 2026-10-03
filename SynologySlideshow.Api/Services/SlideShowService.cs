@@ -13,7 +13,7 @@ public class SlideShowService
         _options = options.Value;
     }
 
-    public async Task InitAsync()
+    public virtual async Task InitAsync()
     {
         var source = new SynologyAlbumSource(_options.Uri);
         await source.Login(_options.Username, _options.Password);
@@ -21,6 +21,11 @@ public class SlideShowService
         await slideShow.Refresh();
         SlideShow = slideShow;
     }
+
+    // Re-fetches every album and slide from Synology, so newly-added or removed photos are
+    // picked up without restarting the process. Called by MidnightRefreshService on a timer
+    // and by AdminController's manual refresh endpoint.
+    public virtual Task RefreshAsync() => SlideShow.Refresh();
 
     public SlideShow SlideShow { get; private set; } = null!;
 }
@@ -59,7 +64,7 @@ public class SlideShow
         foreach (var album in albums)
         {
             var slides = await _source.GetSlides(album);
-            //Shuffle(slides);
+            Shuffle(slides);
             dict.Add(album, slides);
         }
         _dict = dict;

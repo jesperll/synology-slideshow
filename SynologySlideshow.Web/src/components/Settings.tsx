@@ -5,11 +5,12 @@ interface SettingsProps {
   settings: AppSettings;
   onSettingsChange: (settings: Partial<AppSettings>) => void;
   onClose: () => void;
+  channelFooter?: React.ReactNode;
 }
 
 const SLIDESHOW_SPEEDS = [15, 30, 60, 120];
 
-export function Settings({ settings, onSettingsChange, onClose }: SettingsProps) {
+export function Settings({ settings, onSettingsChange, onClose, channelFooter }: SettingsProps) {
   const isFitMode = settings.imageZoomMode === ImageZoomMode.Fit;
   const isFillMode = settings.imageZoomMode === ImageZoomMode.Fill;
 
@@ -127,6 +128,8 @@ export function Settings({ settings, onSettingsChange, onClose }: SettingsProps)
             </div>
           )}
         </div>
+
+        {channelFooter && <div className="setting-group">{channelFooter}</div>}
 
         <button className="close-button" onClick={onClose}>
           Close
