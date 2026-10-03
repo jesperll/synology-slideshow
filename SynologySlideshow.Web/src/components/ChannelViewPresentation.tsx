@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Album, ChannelState, Slide, SwipeDirection } from '../types';
 import { getAlbums, getAlbumSlides } from '../services/api';
 import { useSettings } from '../hooks/useSettings';
@@ -33,6 +33,8 @@ export function ChannelViewPresentation({
   const [showOverlay, setShowOverlay] = useState(false);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
+  const [previousSlide, setPreviousSlide] = useState<Slide | null>(null);
+  const previousAlbumIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     getAlbums()
@@ -41,19 +43,31 @@ export function ChannelViewPresentation({
   }, []);
 
   useEffect(() => {
-    document.title = state.name;
-  }, [state.name]);
+    const currentAlbumName = albums.find((a) => a.id === state.currentAlbumId)?.name;
+    document.title = currentAlbumName || 'Synology Slideshow';
+  }, [albums, state.currentAlbumId]);
 
+  // Cross-fades into the new slide by keeping the outgoing one mounted (fading out) behind
+  // the incoming one (fading in) - but only within the same album: switching to a different
+  // album cuts cleanly instead of fading from a now-unrelated slide.
   useEffect(() => {
+    const albumChanged = previousAlbumIdRef.current !== state.currentAlbumId;
+    previousAlbumIdRef.current = state.currentAlbumId;
+
     if (!state.currentAlbumId || state.currentSlideId == null) {
+      setPreviousSlide(null);
       setCurrentSlide(null);
       return;
     }
     getAlbumSlides(state.currentAlbumId)
       .then((response) => {
-        setCurrentSlide(response.data.find((s) => s.id === state.currentSlideId) ?? null);
+        const next = response.data.find((s) => s.id === state.currentSlideId) ?? null;
+        setPreviousSlide(albumChanged ? null : currentSlide);
+        setCurrentSlide(next);
       })
       .catch((error) => console.error('Failed to load album slides:', error));
+    // currentSlide is read for the outgoing-slide snapshot, not to react to its own changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentAlbumId, state.currentSlideId]);
 
   // Showing settings is purely a local overlay - it must never pause the channel, since
@@ -91,6 +105,18 @@ export function ChannelViewPresentation({
 
   return (
     <SwipeArea onSwipe={handleSwipe} className="full-screen">
+      {previousSlide && (
+        <SlideLayer
+          key={`prev-${previousSlide.id}`}
+          slide={previousSlide}
+          zoomMode={settings.imageZoomMode}
+          showBlurredBackground={settings.showBlurredBackground}
+          kenBurnsEffect={settings.kenBurnsEffect}
+          fadeOut
+          isCurrentSlide={false}
+        />
+      )}
+
       {currentSlide && (
         <SlideLayer
           key={`current-${currentSlide.id}`}

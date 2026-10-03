@@ -31,6 +31,104 @@ describe('ChannelViewPresentation', () => {
     await waitFor(() => expect(api.getAlbumSlides).toHaveBeenCalledWith(5));
   });
 
+  it("sets the document title to the current album's name", async () => {
+    vi.mocked(api.getAlbums).mockResolvedValue({ data: [{ id: 5, name: 'Holiday', thumbnail: '' }] } as any);
+
+    render(
+      <ChannelViewPresentation
+        state={baseState}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    await waitFor(() => expect(document.title).toBe('Holiday'));
+  });
+
+  it('falls back to a generic document title when no album is assigned', async () => {
+    render(
+      <ChannelViewPresentation
+        state={{ ...baseState, currentAlbumId: null, currentSlideId: null }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    await waitFor(() => expect(document.title).toBe('Synology Slideshow'));
+  });
+
+  it('cross-fades: the outgoing slide fades out while the incoming one fades in', async () => {
+    vi.mocked(api.getAlbumSlides).mockResolvedValue({
+      data: [
+        { id: 10, uri: '/img/10.jpg', description: '', location: '', date: '2026-07-16T20:09:53' },
+        { id: 11, uri: '/img/11.jpg', description: '', location: '', date: '2026-07-16T20:09:53' }
+      ]
+    } as any);
+    const { container, rerender } = render(
+      <ChannelViewPresentation
+        state={baseState}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+    await waitFor(() => expect(container.querySelector('.fadeIn')).not.toBeNull());
+
+    rerender(
+      <ChannelViewPresentation
+        state={{ ...baseState, currentSlideId: 11 }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector<HTMLElement>('.fadeOut')?.style.backgroundImage).toContain('10.jpg');
+      expect(container.querySelector<HTMLElement>('.fadeIn')?.style.backgroundImage).toContain('11.jpg');
+    });
+  });
+
+  it('cuts cleanly (no cross-fade) when switching to a different album', async () => {
+    vi.mocked(api.getAlbumSlides).mockImplementation((albumId: number) =>
+      Promise.resolve({
+        data:
+          albumId === 5
+            ? [{ id: 10, uri: '/img/10.jpg', description: '', location: '', date: '2026-07-16T20:09:53' }]
+            : [{ id: 20, uri: '/img/20.jpg', description: '', location: '', date: '2026-07-16T20:09:53' }]
+      } as any)
+    );
+    const { container, rerender } = render(
+      <ChannelViewPresentation
+        state={baseState}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+    await waitFor(() => expect(container.querySelector('.fadeIn')).not.toBeNull());
+
+    rerender(
+      <ChannelViewPresentation
+        state={{ ...baseState, currentAlbumId: 6, currentSlideId: 20 }}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelector<HTMLElement>('.fadeIn')?.style.backgroundImage).toContain('20.jpg'));
+    expect(container.querySelector('.fadeOut')).toBeNull();
+  });
+
   it("shows the current slide's location and capture date in the lower-left corner", async () => {
     render(
       <ChannelViewPresentation
