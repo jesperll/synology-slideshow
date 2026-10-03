@@ -122,6 +122,25 @@ public class ChannelPlaybackServiceLinkingTests : IDisposable
     }
 
     [Fact]
+    public async Task LinkingFailsWhenTheDefaultChannelIsIncluded()
+    {
+        int defaultId;
+        using (var scope = _provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
+            var defaultChannel = new Channel { Name = "Default", NormalizedName = "DEFAULT", IsDefault = true, IsPaused = false };
+            db.Channels.Add(defaultChannel);
+            db.SaveChanges();
+            defaultId = defaultChannel.Id;
+        }
+
+        var result = await _playback.LinkAsync(new[] { _channelA, defaultId });
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.Error);
+    }
+
+    [Fact]
     public async Task UnlinkingDissolvesTheWholeGroupAndEachContinuesIndependently()
     {
         await _playback.LinkAsync(new[] { _channelA, _channelB });

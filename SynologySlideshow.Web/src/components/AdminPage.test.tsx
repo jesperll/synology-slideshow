@@ -65,6 +65,32 @@ describe('AdminPage', () => {
 
     expect(screen.getByText((_, element) => element?.textContent === 'Default (default)')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it("links a channel's name to its viewer page in a new tab", () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    const link = screen.getByRole('link', { name: 'kitchen' });
+    expect(link).toHaveAttribute('href', '/kitchen');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  it('disables manual play/pause when a channel has no viewers', () => {
+    mockHook({
+      snapshot: {
+        channels: [
+          { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 0, linkedChannelIds: [] }
+        ]
+      }
+    });
+
+    render(<AdminPage />);
+
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeDisabled();
   });
 
   it('creates a channel through the form', async () => {

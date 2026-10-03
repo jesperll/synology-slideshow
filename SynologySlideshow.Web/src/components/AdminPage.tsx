@@ -222,14 +222,18 @@ export function AdminPage() {
             <React.Fragment key={channel.channelId}>
               <tr>
                 <td>
-                  <input
-                    type="checkbox"
-                    checked={selectedForLink.has(channel.channelId)}
-                    onChange={() => toggleSelectedForLink(channel.channelId)}
-                  />
+                  {!channel.isDefault && (
+                    <input
+                      type="checkbox"
+                      checked={selectedForLink.has(channel.channelId)}
+                      onChange={() => toggleSelectedForLink(channel.channelId)}
+                    />
+                  )}
                 </td>
                 <td>
-                  {channel.name}
+                  <a href={`/${channel.name}`} target="_blank" rel="noopener noreferrer">
+                    {channel.name}
+                  </a>
                   {channel.isDefault && ' (default)'}
                 </td>
                 <td>{channel.viewerCount}</td>
@@ -273,7 +277,11 @@ export function AdminPage() {
                   )}
                 </td>
                 <td>
-                  <button onClick={() => requestTogglePause(channel.channelId)}>
+                  <button
+                    onClick={() => requestTogglePause(channel.channelId)}
+                    disabled={channel.viewerCount === 0}
+                    title={channel.viewerCount === 0 ? 'No viewers to control' : undefined}
+                  >
                     {channel.isPaused ? 'Play' : 'Pause'}
                   </button>
                   <button onClick={() => requestPrevious(channel.channelId)}>Previous</button>

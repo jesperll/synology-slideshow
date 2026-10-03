@@ -73,9 +73,11 @@ public class ChannelPlaybackService
 
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
-        var existingCount = await db.Channels.CountAsync(c => distinctIds.Contains(c.Id));
-        if (existingCount != distinctIds.Count)
+        var matched = await db.Channels.Where(c => distinctIds.Contains(c.Id)).ToListAsync();
+        if (matched.Count != distinctIds.Count)
             return new LinkResult(false, "One or more channels don't exist.");
+        if (matched.Any(c => c.IsDefault))
+            return new LinkResult(false, "The default channel can't be linked.");
 
         var (success, error) = _syncGroups.Link(distinctIds);
         if (!success) return new LinkResult(false, error);
