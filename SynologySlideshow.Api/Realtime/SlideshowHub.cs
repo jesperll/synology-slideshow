@@ -34,7 +34,7 @@ public class SlideshowHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var leftChannelId = _presence.OnDisconnected(Context.ConnectionId);
-        if (leftChannelId is int id) SyncTimersForGroup(id);
+        if (leftChannelId is int id) await SyncPlaybackToPresenceAsync(id);
         await BroadcastPresenceAsync();
         await base.OnDisconnectedAsync(exception);
     }
@@ -53,18 +53,9 @@ public class SlideshowHub : Hub
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(channel.Id));
         var previousChannelId = _presence.OnJoinedChannel(Context.ConnectionId, channel.Id);
-        SyncTimersForGroup(channel.Id);
-        if (previousChannelId is int previousId) SyncTimersForGroup(previousId);
+        await SyncPlaybackToPresenceAsync(channel.Id);
+        if (previousChannelId is int previousId) await SyncPlaybackToPresenceAsync(previousId);
         await BroadcastPresenceAsync();
-
-        // A viewer showing up to a paused channel almost always means "nobody told it to play
-        // yet" (every channel starts paused) rather than a pause someone wants preserved for
-        // this new viewer - so joining resumes it. TogglePauseAsync already applies to the
-        // whole sync-linked group, not just this channel, which is correct here too.
-        if (channel.IsPaused)
-        {
-            return await _playback.TogglePauseAsync(channel.Id);
-        }
         return await _playback.GetStateAsync(channel.Id);
     }
 
@@ -72,7 +63,7 @@ public class SlideshowHub : Hub
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(channelId));
         _presence.OnLeftChannel(Context.ConnectionId, channelId);
-        SyncTimersForGroup(channelId);
+        await SyncPlaybackToPresenceAsync(channelId);
         await BroadcastPresenceAsync();
     }
 
@@ -93,10 +84,10 @@ public class SlideshowHub : Hub
         {
             // Linking can give a previously-idle (0-viewer) member a group that now has
             // viewers via its new groupmates, or vice versa for an unlinked member - re-sync
-            // every affected channel's timer rather than just the ones passed in.
+            // every affected channel rather than just the ones passed in.
             foreach (var id in channelIds)
             {
-                SyncTimersForGroup(id);
+                await SyncPlaybackToPresenceAsync(id);
             }
             await BroadcastPresenceAsync();
         }
@@ -106,19 +97,23 @@ public class SlideshowHub : Hub
     public async Task<ChannelStateDto> RequestUnlinkChannel(int channelId)
     {
         var state = await _playback.UnlinkAsync(channelId);
-        SyncTimersForGroup(channelId);
+        await SyncPlaybackToPresenceAsync(channelId);
         await BroadcastPresenceAsync();
         return state;
     }
 
-    // A channel's advance timer should only run while someone is actually watching - either
-    // this channel directly, or (for a sync-linked group) any of its groupmates, since a
-    // linked group's lowest-id member drives the whole group's advance regardless of which
-    // member's viewers keep it alive. Running the timer with nobody watching wastes work and
-    // inflates view stats for slides nobody saw; this does not touch the admin-facing
-    // IsPaused flag, so an admin's manual pause/play and manual Next/Previous keep working
-    // regardless of viewer count.
-    private void SyncTimersForGroup(int channelId)
+    // Keeps a channel's (or, for a sync-linked group, the whole group's) timer and paused
+    // state in sync with whether anyone is actually watching. Nobody watching: stop the timer
+    // (wasted work and inflated view stats otherwise) and pause, so the admin UI doesn't keep
+    // showing "Playing" for a channel that's sitting frozen with its timer stopped. Someone
+    // watching again: start the timer and resume - a fresh or newly-rejoined channel has
+    // nothing to play for until a viewer is actually there to see it, so this is also how a
+    // freshly-created channel (which always starts paused) begins playing for its first
+    // viewer, and a sync-linked group's lowest-id member keeps driving the whole group
+    // regardless of which member's viewers keep it alive. An admin's manual Next/Previous/
+    // album-switch keep working with zero viewers either way; only the automatic tick and the
+    // Playing/Paused status are tied to presence.
+    private async Task SyncPlaybackToPresenceAsync(int channelId)
     {
         var members = _playback.GetGroupMembers(channelId);
         var totalViewers = members.Sum(_presence.GetViewerCount);
@@ -126,6 +121,16 @@ public class SlideshowHub : Hub
         {
             if (totalViewers == 0) _playback.StopTimer(id);
             else _playback.StartTimer(id);
+        }
+
+        var state = await _playback.GetStateAsync(channelId);
+        if (totalViewers == 0 && !state.IsPaused)
+        {
+            await _playback.TogglePauseAsync(channelId);
+        }
+        else if (totalViewers > 0 && state.IsPaused)
+        {
+            await _playback.TogglePauseAsync(channelId);
         }
     }
 
