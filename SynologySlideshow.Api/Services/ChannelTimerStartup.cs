@@ -14,10 +14,24 @@ public class ChannelTimerStartup : IHostedService
         _playback = playback;
     }
 
+    public const string DefaultChannelName = "Default";
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
+
+        if (!await db.Channels.AnyAsync(c => c.IsDefault, cancellationToken))
+        {
+            db.Channels.Add(new Channel
+            {
+                Name = DefaultChannelName,
+                NormalizedName = DefaultChannelName.ToUpperInvariant(),
+                IsDefault = true
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         var ids = await db.Channels.Select(c => c.Id).ToListAsync(cancellationToken);
         foreach (var id in ids)
         {

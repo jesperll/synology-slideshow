@@ -12,9 +12,8 @@ vi.mock('../services/api');
 
 describe('AdminPage', () => {
   const baseSnapshot: AdminSnapshot = {
-    anonymousCount: 2,
     channels: [
-      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 3, linkedChannelIds: [] }
+      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 3, linkedChannelIds: [] }
     ]
   };
 
@@ -43,14 +42,28 @@ describe('AdminPage', () => {
     } as any);
   });
 
-  it('renders the anonymous count and each channel from the snapshot', () => {
+  it('renders each channel from the snapshot', () => {
     mockHook();
 
     render(<AdminPage />);
 
-    expect(screen.getByText('Anonymous: 2 connected')).toBeInTheDocument();
     expect(screen.getByText('kitchen')).toBeInTheDocument();
     expect(screen.getByText('Playing')).toBeInTheDocument();
+  });
+
+  it("labels the default channel and hides its Delete button", () => {
+    mockHook({
+      snapshot: {
+        channels: [
+          { channelId: 1, name: 'Default', currentAlbumId: null, currentSlideId: null, isPaused: true, isDefault: true, viewerCount: 0, linkedChannelIds: [] }
+        ]
+      }
+    });
+
+    render(<AdminPage />);
+
+    expect(screen.getByText((_, element) => element?.textContent === 'Default (default)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
   it('creates a channel through the form', async () => {
@@ -125,7 +138,7 @@ describe('AdminPage', () => {
 
     expect(screen.getByText('kitchen')).toBeInTheDocument();
 
-    mockHook({ snapshot: { anonymousCount: 2, channels: [] } });
+    mockHook({ snapshot: { channels: [] } });
     rerender(<AdminPage />);
 
     expect(screen.queryByText('kitchen')).not.toBeInTheDocument();
@@ -152,8 +165,7 @@ describe('AdminPage', () => {
   it('shows no current-slide thumbnail when the channel has no current slide', async () => {
     mockHook({
       snapshot: {
-        anonymousCount: 0,
-        channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true, viewerCount: 0, linkedChannelIds: [] }]
+        channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true, isDefault: false, viewerCount: 0, linkedChannelIds: [] }]
       }
     });
     vi.mocked(api.getAlbumSlides).mockClear();
@@ -166,10 +178,9 @@ describe('AdminPage', () => {
   });
 
   const twoChannelSnapshot: AdminSnapshot = {
-    anonymousCount: 2,
     channels: [
-      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 3, linkedChannelIds: [] },
-      { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [] }
+      { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 3, linkedChannelIds: [] },
+      { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 1, linkedChannelIds: [] }
     ]
   };
 
@@ -216,10 +227,9 @@ describe('AdminPage', () => {
 
   it("shows a linked channel's name (not just its id) in the Linked with column", () => {
     const linkedSnapshot: AdminSnapshot = {
-      anonymousCount: 0,
       channels: [
-        { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [2] },
-        { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [1] }
+        { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 1, linkedChannelIds: [2] },
+        { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 1, linkedChannelIds: [1] }
       ]
     };
     mockHook({ snapshot: linkedSnapshot });
@@ -239,10 +249,9 @@ describe('AdminPage', () => {
   it('unlinks a channel through its row button', () => {
     const requestUnlink = vi.fn();
     const linkedSnapshot: AdminSnapshot = {
-      anonymousCount: 0,
       channels: [
-        { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [2] },
-        { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [1] }
+        { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 1, linkedChannelIds: [2] },
+        { channelId: 2, name: 'living-room', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 1, linkedChannelIds: [1] }
       ]
     };
     mockHook({ snapshot: linkedSnapshot, requestUnlink });

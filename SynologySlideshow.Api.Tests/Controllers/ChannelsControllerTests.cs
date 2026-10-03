@@ -46,6 +46,9 @@ public class ChannelsControllerTests : IClassFixture<SlideshowApiFactory>
     [InlineData("admin")]
     [InlineData("Admin")]
     [InlineData(" ADMIN ")]
+    [InlineData("default")]
+    [InlineData("Default")]
+    [InlineData(" DEFAULT ")]
     public async Task CreateWithReservedNameReturnsBadRequest(string name)
     {
         var response = await _client.PostAsJsonAsync("/api/channels", new CreateChannelRequest { Name = name });
@@ -98,5 +101,24 @@ public class ChannelsControllerTests : IClassFixture<SlideshowApiFactory>
     {
         var response = await _client.DeleteAsync("/api/channels/999999");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListIncludesTheSeededDefaultChannel()
+    {
+        var listResponse = await _client.GetFromJsonAsync<List<ChannelSummary>>("/api/channels");
+
+        Assert.Contains(listResponse!, c => c.IsDefault && c.Name == "Default");
+    }
+
+    [Fact]
+    public async Task DeletingTheDefaultChannelReturnsBadRequest()
+    {
+        var listResponse = await _client.GetFromJsonAsync<List<ChannelSummary>>("/api/channels");
+        var defaultChannel = listResponse!.Single(c => c.IsDefault);
+
+        var response = await _client.DeleteAsync($"/api/channels/{defaultChannel.Id}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

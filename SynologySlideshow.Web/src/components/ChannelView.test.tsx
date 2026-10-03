@@ -43,7 +43,7 @@ describe('ChannelView', () => {
 
   it('remembers the channel name once state arrives', async () => {
     vi.mocked(connectionHook.useChannelConnection).mockReturnValue({
-      state: { channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true },
+      state: { channelId: 1, name: 'kitchen', currentAlbumId: null, currentSlideId: null, isPaused: true, isDefault: false },
       notFound: false,
       requestNext: vi.fn(),
       requestPrevious: vi.fn(),

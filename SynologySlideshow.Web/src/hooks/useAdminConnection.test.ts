@@ -7,7 +7,7 @@ import { AdminSnapshot, ChannelState } from '../types';
 class FakeConnection implements HubConnectionLike {
   handlers = new Map<string, (...args: any[]) => void>();
   invokeCalls: [string, any[]][] = [];
-  snapshot: AdminSnapshot = { anonymousCount: 0, channels: [] };
+  snapshot: AdminSnapshot = { channels: [] };
   linkResult: { success: boolean; error: string | null } = { success: true, error: null };
 
   on(methodName: string, callback: (...args: any[]) => void): void {
@@ -45,41 +45,51 @@ class FakeConnection implements HubConnectionLike {
 }
 
 describe('useAdminConnection', () => {
+  const channelStub = (channelId: number) => ({
+    channelId,
+    name: `channel-${channelId}`,
+    currentAlbumId: null,
+    currentSlideId: null,
+    isPaused: false,
+    isDefault: false,
+    viewerCount: 0,
+    linkedChannelIds: []
+  });
+
   it('joins the admin group on start and exposes the initial snapshot', async () => {
     const fake = new FakeConnection();
-    fake.snapshot = { anonymousCount: 3, channels: [] };
+    fake.snapshot = { channels: [channelStub(3)] };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
 
     await waitFor(() => expect(result.current.snapshot).not.toBeNull());
-    expect(result.current.snapshot?.anonymousCount).toBe(3);
+    expect(result.current.snapshot?.channels[0].channelId).toBe(3);
   });
 
   it('replaces the snapshot when PresenceChanged is pushed', async () => {
     const fake = new FakeConnection();
-    fake.snapshot = { anonymousCount: 1, channels: [] };
+    fake.snapshot = { channels: [channelStub(1)] };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
     await waitFor(() => expect(result.current.snapshot).not.toBeNull());
 
     act(() => {
-      fake.emit('PresenceChanged', { anonymousCount: 5, channels: [] });
+      fake.emit('PresenceChanged', { channels: [channelStub(5)] });
     });
 
-    await waitFor(() => expect(result.current.snapshot?.anonymousCount).toBe(5));
+    await waitFor(() => expect(result.current.snapshot?.channels[0].channelId).toBe(5));
   });
 
   it('merges a ChannelStateChanged push into the matching channel entry without touching its viewer count', async () => {
     const fake = new FakeConnection();
     fake.snapshot = {
-      anonymousCount: 0,
-      channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, viewerCount: 1, linkedChannelIds: [] }]
+      channels: [{ channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false, viewerCount: 1, linkedChannelIds: [] }]
     };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
     await waitFor(() => expect(result.current.snapshot).not.toBeNull());
 
-    const pushed: ChannelState = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 20, isPaused: true };
+    const pushed: ChannelState = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 20, isPaused: true, isDefault: false };
     act(() => {
       fake.emit('ChannelStateChanged', pushed);
     });
@@ -90,7 +100,7 @@ describe('useAdminConnection', () => {
 
   it('sends the channel id when requesting a pause toggle', async () => {
     const fake = new FakeConnection();
-    fake.snapshot = { anonymousCount: 0, channels: [] };
+    fake.snapshot = { channels: [] };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
     await waitFor(() => expect(result.current.snapshot).not.toBeNull());
@@ -103,25 +113,25 @@ describe('useAdminConnection', () => {
   });
   it('re-joins the admin group and refreshes the snapshot after a reconnect', async () => {
     const fake = new FakeConnection();
-    fake.snapshot = { anonymousCount: 1, channels: [] };
+    fake.snapshot = { channels: [channelStub(1)] };
     const factory = () => fake;
 
     const { result } = renderHook(() => useAdminConnection(factory));
-    await waitFor(() => expect(result.current.snapshot?.anonymousCount).toBe(1));
+    await waitFor(() => expect(result.current.snapshot?.channels[0].channelId).toBe(1));
     const joinsBefore = fake.invokeCalls.filter(([name]) => name === 'JoinAdmin').length;
 
-    fake.snapshot = { anonymousCount: 4, channels: [] };
+    fake.snapshot = { channels: [channelStub(4)] };
     act(() => {
       fake.emitReconnected();
     });
 
-    await waitFor(() => expect(result.current.snapshot?.anonymousCount).toBe(4));
+    await waitFor(() => expect(result.current.snapshot?.channels[0].channelId).toBe(4));
     expect(fake.invokeCalls.filter(([name]) => name === 'JoinAdmin').length).toBe(joinsBefore + 1);
   });
 
   it('returns the link result and forwards the channel ids', async () => {
     const fake = new FakeConnection();
-    fake.snapshot = { anonymousCount: 0, channels: [] };
+    fake.snapshot = { channels: [] };
     fake.linkResult = { success: true, error: null };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
@@ -135,7 +145,7 @@ describe('useAdminConnection', () => {
 
   it('sends the channel id when requesting an unlink', async () => {
     const fake = new FakeConnection();
-    fake.snapshot = { anonymousCount: 0, channels: [] };
+    fake.snapshot = { channels: [] };
 
     const { result } = renderHook(() => useAdminConnection(() => fake));
     await waitFor(() => expect(result.current.snapshot).not.toBeNull());

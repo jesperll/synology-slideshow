@@ -137,7 +137,6 @@ export function AdminPage() {
   return (
     <div className="admin-page">
       <h1>Channels</h1>
-      <p>Anonymous: {snapshot.anonymousCount} connected</p>
 
       <form onSubmit={handleCreate}>
         <input
@@ -183,7 +182,10 @@ export function AdminPage() {
                     onChange={() => toggleSelectedForLink(channel.channelId)}
                   />
                 </td>
-                <td>{channel.name}</td>
+                <td>
+                  {channel.name}
+                  {channel.isDefault && ' (default)'}
+                </td>
                 <td>{channel.viewerCount}</td>
                 <td>{channel.isPaused ? 'Paused' : 'Playing'}</td>
                 <td>
@@ -238,7 +240,9 @@ export function AdminPage() {
                   </button>
                 </td>
                 <td>
-                  <button onClick={() => deleteChannel(channel.channelId)}>Delete</button>
+                  {!channel.isDefault && (
+                    <button onClick={() => deleteChannel(channel.channelId)}>Delete</button>
+                  )}
                 </td>
               </tr>
               {expandedChannelId === channel.channelId && channel.currentAlbumId != null && (

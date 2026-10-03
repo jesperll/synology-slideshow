@@ -8,17 +8,23 @@ A personal digital-photo-frame app: an ASP.NET Core backend proxies a Synology N
 
 ## Solution layout
 
-- **SynologySlideshow.Core** — no ASP.NET dependency. `SynologyAlbumSource` talks directly to the Synology DSM `entry.cgi`/`auth.cgi` endpoints (session login via `_sid`, then `SYNO.Foto.Browse.Album` / `SYNO.Foto.Browse.Item` calls) and maps DSM JSON into `Models/` (`PhotoAlbum`, `PhotoSlide`, etc.), including the location-string logic (prefers Danish county/state/country names, falls back to landmark/village/town/city elsewhere) and image URL building for thumbnails/photos.
-- **SynologySlideshow.Api** — ASP.NET Core Web API. `Services/SlideShowService.cs` owns a singleton `SlideShow` that logs into Synology once at startup (`InitAsync`, called from `Program.cs` after `app.Build()`), fetches all albums/slides eagerly, and shuffles them into an in-memory `Dictionary<PhotoAlbum, PhotoSlide[]>`. There is no re-fetch/refresh trigger currently wired up beyond `SlideShow.Refresh()` being callable. `Controllers/ApiController.cs` exposes `/api/albums`, `/api/albums/{id}`, `/api/albums/{id}/thumbnail.jpg`, `/api/albums/{id}/slides`, `/api/albums/{id}/slides/{slide}.jpg` — the two `.jpg` routes stream the image bytes through from Synology rather than redirecting, so the NAS credentials/session never reach the browser. Also serves the built React app from `wwwroot` via `MapFallbackToFile("index.html")`.
+- **SynologySlideshow.Core** — no ASP.NET dependency. `SynologyAlbumSource` talks directly to the Synology DSM `entry.cgi`/`auth.cgi` endpoints (session login via `_sid`, then `SYNO.Foto.Browse.Album` / `SYNO.Foto.Browse.Item` calls) and maps DSM JSON into `Models/` (`PhotoAlbum`, `PhotoSlide`, etc.), including the location-string logic (prefers Danish county/state/country names, falls back to landmark/village/town/city elsewhere). Each slide gets two Synology thumbnail URLs: `Uri` (`size=xl`, full quality, used for full-screen display) and `ThumbnailUri` (`size=sm`, ~23KB, used only by the admin page's grid/current-slide previews).
+- **SynologySlideshow.Api** — ASP.NET Core Web API. `Services/SlideShowService.cs` owns a singleton `SlideShow` that logs into Synology once at startup (`InitAsync`, called from `Program.cs` after `app.Build()`), fetches all albums/slides eagerly, and shuffles them into an in-memory `Dictionary<PhotoAlbum, PhotoSlide[]>`. There is no re-fetch/refresh trigger currently wired up beyond `SlideShow.Refresh()` being callable. `Controllers/ApiController.cs` exposes `/api/albums`, `/api/albums/{id}`, `/api/albums/{id}/thumbnail.jpg`, `/api/albums/{id}/slides`, `/api/albums/{id}/slides/{slide}.jpg`, `/api/albums/{id}/slides/{slide}/thumbnail.jpg` — the `.jpg` routes stream image bytes through from Synology rather than redirecting, so the NAS credentials/session never reach the browser. Also serves the built React app from `wwwroot` via `MapFallbackToFile("index.html")`.
+- **Channels** (SQLite-backed, EF Core, `Data/SlideshowDbContext.cs`) are the unit of playback: each `Channel` row has its own current album/slide/pause state, owned server-side by `Services/ChannelPlaybackService.cs` (a 30s advance timer per channel, sync-linked groups via `SyncGroupService`) and pushed to viewers over SignalR (`Realtime/SlideshowHub.cs` at `/hub/slideshow`). `Services/ChannelTimerStartup.cs` seeds a permanent, non-deletable `Channel` named `"Default"` (`IsDefault = true`) on first boot — every device is on *some* channel, named or default; there's no separate "anonymous" tier. `Controllers/ChannelsController.cs` is the REST surface for creating/listing/deleting channels and viewing per-channel stats (`Services/ViewStatsService.cs` records a view on every advance/jump).
 - **SynologySlideshow.Web** — Vite + React 18 + TypeScript SPA. `services/api.ts` calls the API under `/api` (proxied to the backend in dev via `vite.config.ts`, same-origin in production since the API serves the built static files).
 
 ## Frontend architecture
 
-- `Home.tsx` is the central component: owns album/slide selection, the current/previous slide pair (for cross-fade transitions via `SlideLayer`), the slide-advance timer, and image preloading. Preloaded `Image` objects are kept in refs (`imageObjectsRef`) specifically so the browser doesn't re-fetch them when they're swapped back into view.
-- The slide timer is rebuilt whenever pause state, slide speed, tab visibility, or the slides array changes (`useTabVisibility` pauses the show when the tab isn't active; `useScreenWakeLock` keeps the screen on while visible).
-- Settings (zoom mode, blurred background, Ken Burns effect, slide speed) and the last-viewed album ID persist to `localStorage` — see `useSettings.ts` and the `STORAGE_KEY`/`SETTINGS_STORAGE_KEY` constants in `Home.tsx`/`useSettings.ts`.
-- `useVersionCheck.ts` polls `/version.json` every 5 minutes and compares against the hash captured at first load; the Vite `generate-version` plugin (in `vite.config.ts`) stamps a fresh random hash into `dist/version.json` on every build, which is how `UpdateNotification` detects that a new deployment has shipped.
-- Routing (`react-router-dom`) is single-route (`/` and `/album/:albumId` both render `Home`); album selection updates the URL and `localStorage` in that priority order (URL param → saved album → first album).
+- There is a single viewer implementation: `ChannelView.tsx`/`ChannelViewPresentation.tsx`, driven entirely by server-pushed `ChannelState` over SignalR (`useChannelConnection.ts`) — it owns no local slide-selection state. `RootRoute.tsx` redirects `/` to whichever channel this device last visited (`services/channelMemory.ts`, `localStorage`), or to `/Default` if nothing is remembered. `SlideLayer` renders the current slide (cross-fade via `fadeIn`/`fadeOut` props) with image preloading.
+- Settings (zoom mode, blurred background, Ken Burns effect, slide speed) persist to `localStorage` per-device — see `useSettings.ts`. The Settings panel's footer is conditional: on the default channel it shows `JoinChannelPicker` (pick a different channel); on a named channel it shows a "Leave channel" button (returns to `/`, which redirects back to Default).
+- `useVersionCheck.ts` polls `/version.json` every 5 minutes and compares against the hash captured at first load; the Vite `generate-version` plugin (in `vite.config.ts`) stamps a fresh random hash into `dist/version.json` on every build and also appends it as a `?v=` query param on `index.html`'s `app.css` link, so neither the JS bundle nor the stylesheet can be served stale from a browser cache after a deploy.
+- `AdminPage.tsx` (`/admin`) lists every channel (including the protected Default one, which has no Delete button) with live viewer counts, playback controls, sync-link management, and per-channel view stats, all driven by `useAdminConnection.ts` over the same SignalR hub.
+- Routing (`react-router-dom`): `/` → `RootRoute`, `/admin` → `AdminPage`, `/:channelName` → `ChannelView` (catch-all for everything else, including `Default`).
+
+## Testing
+
+Backend: xUnit (`SynologySlideshow.Api.Tests`) — run with `dotnet test SynologySlideshow.sln`. Test-class parallelism is disabled assembly-wide (`SynologySlideshow.Api.Tests/AssemblyInfo.cs`) because several fixtures call the process-global `SqliteConnection.ClearAllPools()`, which otherwise races across concurrently-running test classes.
+Frontend: vitest + Testing Library (`SynologySlideshow.Web`) — run with `npm test`.
 
 ## Commands
 
@@ -36,8 +42,6 @@ npm run dev       # Vite dev server on :5173, proxies /api to http://localhost:5
 npm run build     # tsc typecheck + production build to dist/
 npm run preview   # preview the production build
 ```
-
-There are no automated test suites in this repo currently.
 
 ## Docker / deployment
 

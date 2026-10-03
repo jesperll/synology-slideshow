@@ -126,39 +126,8 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
     }
 
     [Fact]
-    public async Task AConnectionThatOnlyJoinsAdminIsNotCountedAsAnonymous()
+    public async Task DeletingAChannelRemovesItFromTheSnapshot()
     {
-        // Uses its own factory (and so its own server and PresenceTracker) rather than the
-        // shared class fixture, so a disconnect left over from another test in this class
-        // can't land between the reads below.
-        await using var isolatedFactory = new SlideshowApiFactory();
-        var observer = BuildConnection(isolatedFactory);
-        var probe = BuildConnection(isolatedFactory);
-        await observer.StartAsync();
-        await probe.StartAsync();
-        try
-        {
-            // observer joins admin first; probe is then the only anonymous connection.
-            var beforeProbeJoinsAdmin = await observer.InvokeAsync<AdminSnapshot>("JoinAdmin");
-            Assert.Equal(1, beforeProbeJoinsAdmin.AnonymousCount);
-
-            var afterProbeJoinsAdmin = await probe.InvokeAsync<AdminSnapshot>("JoinAdmin");
-
-            // The admin dashboard connecting to itself must not inflate the "N anonymous
-            // connected" number it displays.
-            Assert.Equal(0, afterProbeJoinsAdmin.AnonymousCount);
-        }
-        finally
-        {
-            await probe.DisposeAsync();
-            await observer.DisposeAsync();
-        }
-    }
-
-    [Fact]
-    public async Task DeletingAChannelReturnsItsViewersToTheAnonymousCount()
-    {
-        // Isolated factory so the absolute anonymous counts below aren't affected by other tests.
         await using var isolatedFactory = new SlideshowApiFactory();
         var observer = BuildConnection(isolatedFactory);
         var viewer = BuildConnection(isolatedFactory);
@@ -173,14 +142,12 @@ public class AdminPresenceTests : IClassFixture<SlideshowApiFactory>, IAsyncLife
             await viewer.InvokeAsync("JoinChannel", "presence-delete-anon-test");
 
             var beforeDelete = await client.GetFromJsonAsync<AdminSnapshot>("/api/admin/snapshot");
-            Assert.Equal(0, beforeDelete!.AnonymousCount);
-            Assert.Contains(beforeDelete.Channels, c => c.ChannelId == channel.Id && c.ViewerCount == 1);
+            Assert.Contains(beforeDelete!.Channels, c => c.ChannelId == channel.Id && c.ViewerCount == 1);
 
             await client.DeleteAsync($"/api/channels/{channel.Id}");
 
             var afterDelete = await client.GetFromJsonAsync<AdminSnapshot>("/api/admin/snapshot");
             Assert.DoesNotContain(afterDelete!.Channels, c => c.ChannelId == channel.Id);
-            Assert.Equal(1, afterDelete.AnonymousCount);
         }
         finally
         {

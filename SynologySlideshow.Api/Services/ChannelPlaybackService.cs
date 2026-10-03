@@ -343,6 +343,7 @@ public class ChannelPlaybackService
         Name = channel.Name,
         CurrentAlbumId = channel.CurrentAlbumId,
         CurrentSlideId = channel.CurrentSlideId,
-        IsPaused = channel.IsPaused
+        IsPaused = channel.IsPaused,
+        IsDefault = channel.IsDefault
     };
 }

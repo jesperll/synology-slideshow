@@ -28,8 +28,6 @@ public class SlideshowHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        _presence.OnConnected();
-        await BroadcastPresenceAsync();
         await base.OnConnectedAsync();
     }
 
@@ -43,7 +41,6 @@ public class SlideshowHub : Hub
     public async Task<AdminSnapshot> JoinAdmin()
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroupName);
-        _presence.OnJoinedAdmin(Context.ConnectionId);
         return await _snapshotService.BuildAsync();
     }
 

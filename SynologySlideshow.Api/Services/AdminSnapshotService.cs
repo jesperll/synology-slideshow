@@ -33,10 +33,11 @@ public class AdminSnapshotService
                     channel.CurrentAlbumId,
                     channel.CurrentSlideId,
                     channel.IsPaused,
+                    channel.IsDefault,
                     _presence.GetViewerCount(channel.Id),
                     linkedWith);
             })
             .ToArray();
-        return new AdminSnapshot(_presence.GetAnonymousCount(), entries);
+        return new AdminSnapshot(entries);
     }
 }

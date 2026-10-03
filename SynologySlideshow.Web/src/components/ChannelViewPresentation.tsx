@@ -9,6 +9,7 @@ import { SwipeArea } from './SwipeArea';
 import { Clock } from './Clock';
 import { SlideLayer } from './SlideLayer';
 import { OverlayMenu } from './OverlayMenu';
+import { JoinChannelPicker } from './JoinChannelPicker';
 
 interface ChannelViewPresentationProps {
   state: ChannelState;
@@ -126,12 +127,16 @@ export function ChannelViewPresentation({
           onSettingsChange={updateSettings}
           onClose={closeOverlay}
           settingsFooter={
-            <div className="channel-leave">
-              <p>
-                Channel: <strong>{state.name}</strong>
-              </p>
-              <button onClick={onLeave}>Leave channel</button>
-            </div>
+            state.isDefault ? (
+              <JoinChannelPicker />
+            ) : (
+              <div className="channel-leave">
+                <p>
+                  Channel: <strong>{state.name}</strong>
+                </p>
+                <button onClick={onLeave}>Leave channel</button>
+              </div>
+            )
           }
         />
       )}

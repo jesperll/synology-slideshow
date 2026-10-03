@@ -39,11 +39,13 @@ export interface ChannelState {
   currentAlbumId: number | null;
   currentSlideId: number | null;
   isPaused: boolean;
+  isDefault: boolean;
 }
 
 export interface ChannelSummary {
   id: number;
   name: string;
+  isDefault: boolean;
 }
 
 export interface AdminChannelEntry {
@@ -52,6 +54,7 @@ export interface AdminChannelEntry {
   currentAlbumId: number | null;
   currentSlideId: number | null;
   isPaused: boolean;
+  isDefault: boolean;
   viewerCount: number;
   linkedChannelIds: number[];
 }
@@ -62,7 +65,6 @@ export interface LinkResult {
 }
 
 export interface AdminSnapshot {
-  anonymousCount: number;
   channels: AdminChannelEntry[];
 }
 

@@ -6,28 +6,23 @@ namespace SynologySlideshow.Api.Tests.Services;
 public class PresenceTrackerTests
 {
     [Fact]
-    public void AnonymousCountEqualsTotalConnectionsMinusJoinedOnes()
+    public void JoiningAChannelCountsAsAViewerOfIt()
     {
         var tracker = new PresenceTracker();
 
-        tracker.OnConnected(); // connection A, stays anonymous
-        tracker.OnConnected(); // connection B, will join a channel
         tracker.OnJoinedChannel("B", channelId: 1);
 
-        Assert.Equal(1, tracker.GetAnonymousCount());
         Assert.Equal(1, tracker.GetViewerCount(1));
     }
 
     [Fact]
-    public void LeavingAChannelReturnsToAnonymous()
+    public void LeavingAChannelDropsItsViewerCount()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
         tracker.OnJoinedChannel("A", channelId: 1);
 
         tracker.OnLeftChannel("A", channelId: 1);
 
-        Assert.Equal(1, tracker.GetAnonymousCount());
         Assert.Equal(0, tracker.GetViewerCount(1));
     }
 
@@ -35,12 +30,10 @@ public class PresenceTrackerTests
     public void DisconnectingWhileJoinedRemovesFromTheChannelToo()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
         tracker.OnJoinedChannel("A", channelId: 1);
 
         tracker.OnDisconnected("A");
 
-        Assert.Equal(0, tracker.GetAnonymousCount());
         Assert.Equal(0, tracker.GetViewerCount(1));
     }
 
@@ -48,20 +41,16 @@ public class PresenceTrackerTests
     public void MultipleViewersOfTheSameChannelAreAllCounted()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
-        tracker.OnConnected();
         tracker.OnJoinedChannel("A", channelId: 1);
         tracker.OnJoinedChannel("B", channelId: 1);
 
         Assert.Equal(2, tracker.GetViewerCount(1));
-        Assert.Equal(0, tracker.GetAnonymousCount());
     }
 
     [Fact]
     public void JoiningTheSameChannelTwiceDoesNotDoubleCountTheViewer()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
 
         tracker.OnJoinedChannel("A", channelId: 1);
         tracker.OnJoinedChannel("A", channelId: 1); // e.g. a retried JoinChannel call on the same connection
@@ -73,7 +62,6 @@ public class PresenceTrackerTests
     public void JoiningADifferentChannelMovesTheViewerWithoutAnExplicitLeave()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
 
         tracker.OnJoinedChannel("A", channelId: 1);
         tracker.OnJoinedChannel("A", channelId: 2); // no OnLeftChannel(1) in between
@@ -83,21 +71,9 @@ public class PresenceTrackerTests
     }
 
     [Fact]
-    public void AConnectionThatOnlyJoinsAdminDoesNotCountAsAnonymous()
-    {
-        var tracker = new PresenceTracker();
-        tracker.OnConnected();
-
-        tracker.OnJoinedAdmin("A");
-
-        Assert.Equal(0, tracker.GetAnonymousCount());
-    }
-    [Fact]
     public void LeavingWithAMismatchedChannelIdDoesNotCorruptAnyCount()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
-        tracker.OnConnected();
         tracker.OnJoinedChannel("A", channelId: 1);
         tracker.OnJoinedChannel("B", channelId: 2);
 
@@ -105,7 +81,6 @@ public class PresenceTrackerTests
 
         Assert.Equal(1, tracker.GetViewerCount(1));
         Assert.Equal(1, tracker.GetViewerCount(2));
-        Assert.Equal(0, tracker.GetAnonymousCount());
 
         // B's real mapping survived, so a later disconnect still decrements channel 2.
         tracker.OnDisconnected("B");
@@ -114,12 +89,9 @@ public class PresenceTrackerTests
     }
 
     [Fact]
-    public void RemovingAChannelReturnsItsViewersToAnonymous()
+    public void RemovingAChannelDropsItsViewerCount()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
-        tracker.OnConnected();
-        tracker.OnConnected();
         tracker.OnJoinedChannel("A", channelId: 1);
         tracker.OnJoinedChannel("B", channelId: 1);
         tracker.OnJoinedChannel("C", channelId: 2);
@@ -128,15 +100,12 @@ public class PresenceTrackerTests
 
         Assert.Equal(0, tracker.GetViewerCount(1));
         Assert.Equal(1, tracker.GetViewerCount(2));
-        Assert.Equal(2, tracker.GetAnonymousCount());
     }
 
     [Fact]
     public void ViewersOfARemovedChannelCanDisconnectOrRejoinWithoutCorruptingCounts()
     {
         var tracker = new PresenceTracker();
-        tracker.OnConnected();
-        tracker.OnConnected();
         tracker.OnJoinedChannel("A", channelId: 1);
         tracker.OnJoinedChannel("B", channelId: 1);
         tracker.RemoveChannel(1);
@@ -146,6 +115,5 @@ public class PresenceTrackerTests
 
         Assert.Equal(0, tracker.GetViewerCount(1));
         Assert.Equal(1, tracker.GetViewerCount(2));
-        Assert.Equal(0, tracker.GetAnonymousCount());
     }
 }

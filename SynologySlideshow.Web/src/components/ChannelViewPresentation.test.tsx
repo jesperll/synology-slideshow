@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ChannelViewPresentation } from './ChannelViewPresentation';
 import * as api from '../services/api';
 import { ChannelState } from '../types';
@@ -7,7 +8,7 @@ import { ChannelState } from '../types';
 vi.mock('../services/api');
 
 describe('ChannelViewPresentation', () => {
-  const baseState: ChannelState = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+  const baseState: ChannelState = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
   beforeEach(() => {
     vi.mocked(api.getAlbums).mockResolvedValue({ data: [] } as any);
@@ -204,5 +205,46 @@ describe('ChannelViewPresentation', () => {
 
     expect(onTogglePause).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
+  });
+
+  it('shows the channel picker instead of a leave button when on the default channel', async () => {
+    vi.mocked(api.getChannels).mockResolvedValue({ data: [{ id: 1, name: 'kitchen', isDefault: false }] } as any);
+    const { container } = render(
+      <MemoryRouter>
+        <ChannelViewPresentation
+          state={{ ...baseState, isDefault: true }}
+          onNext={vi.fn()}
+          onPrevious={vi.fn()}
+          onTogglePause={vi.fn()}
+          onSwitchAlbum={vi.fn()}
+          onLeave={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    fireEvent.doubleClick(container.querySelector('.scrim')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+
+    expect(await screen.findByText('Point this device at a channel')).toBeInTheDocument();
+    expect(screen.queryByText('Leave channel')).not.toBeInTheDocument();
+  });
+
+  it('shows a leave-channel button instead of the channel picker on a named channel', () => {
+    const { container } = render(
+      <ChannelViewPresentation
+        state={baseState}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        onTogglePause={vi.fn()}
+        onSwitchAlbum={vi.fn()}
+        onLeave={vi.fn()}
+      />
+    );
+
+    fireEvent.doubleClick(container.querySelector('.scrim')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+
+    expect(screen.getByText('Leave channel')).toBeInTheDocument();
+    expect(screen.queryByText('Point this device at a channel')).not.toBeInTheDocument();
   });
 });

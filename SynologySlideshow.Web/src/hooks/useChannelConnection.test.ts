@@ -63,7 +63,7 @@ class FakeConnection implements HubConnectionLike {
 describe('useChannelConnection', () => {
   it('joins the channel on start and exposes the returned state', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
 
@@ -83,13 +83,13 @@ describe('useChannelConnection', () => {
 
   it('updates state when the server pushes ChannelStateChanged', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
 
     act(() => {
-      fake.emit('ChannelStateChanged', { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 20, isPaused: false });
+      fake.emit('ChannelStateChanged', { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 20, isPaused: false, isDefault: false });
     });
 
     await waitFor(() => expect(result.current.state?.currentSlideId).toBe(20));
@@ -97,7 +97,7 @@ describe('useChannelConnection', () => {
 
   it('sends the channel id when requesting the next slide', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
@@ -111,13 +111,13 @@ describe('useChannelConnection', () => {
 
   it('re-joins the channel after SignalR reconnects and applies the new state', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
     expect(fake.joinCount()).toBe(1);
 
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 42, isPaused: true };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 42, isPaused: true, isDefault: false };
     act(() => {
       fake.triggerReconnected();
     });
@@ -130,7 +130,7 @@ describe('useChannelConnection', () => {
 
   it('flags notFound if the channel is gone when re-joining after a reconnect', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
@@ -145,12 +145,12 @@ describe('useChannelConnection', () => {
 
   it('restarts and re-joins once when the connection closes', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
 
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 11, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 11, isPaused: false, isDefault: false };
     act(() => {
       fake.triggerClose(new Error('connection lost'));
     });
@@ -162,7 +162,7 @@ describe('useChannelConnection', () => {
   it('keeps the last known state if restarting after close fails', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
@@ -200,7 +200,7 @@ describe('useChannelConnection', () => {
     try {
       const fake = new FakeConnection();
       fake.startError = new Error('network down');
-      fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+      fake.joinResult = { channelId: 1, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
       const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
       await act(async () => {
@@ -223,7 +223,7 @@ describe('useChannelConnection', () => {
 
   it('flags notFound when a request fails and the channel no longer exists', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
@@ -240,13 +240,13 @@ describe('useChannelConnection', () => {
 
   it('refreshes state and swallows the error when a request fails but the channel still exists', async () => {
     const fake = new FakeConnection();
-    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false };
+    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 10, isPaused: false, isDefault: false };
 
     const { result } = renderHook(() => useChannelConnection('kitchen', () => fake));
     await waitFor(() => expect(result.current.state).not.toBeNull());
 
     fake.failingMethods.add('RequestTogglePause');
-    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 12, isPaused: true };
+    fake.joinResult = { channelId: 7, name: 'kitchen', currentAlbumId: 5, currentSlideId: 12, isPaused: true, isDefault: false };
     await act(async () => {
       await expect(result.current.requestTogglePause()).resolves.toBeUndefined();
     });

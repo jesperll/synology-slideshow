@@ -8,5 +8,6 @@ public class Channel
     public int? CurrentAlbumId { get; set; }
     public int? CurrentSlideId { get; set; }
     public bool IsPaused { get; set; } = true;
+    public bool IsDefault { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

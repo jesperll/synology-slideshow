@@ -12,7 +12,7 @@ namespace SynologySlideshow.Api.Controllers;
 [Route("api/channels")]
 public class ChannelsController : ControllerBase
 {
-    private static readonly string[] ReservedNames = { "ADMIN" };
+    private static readonly string[] ReservedNames = { "ADMIN", "DEFAULT" };
     // Channel names become a single URL path segment, so only allow characters that are safe there.
     private static readonly Regex ValidName = new(@"^[\p{L}\p{N} _-]{1,64}$", RegexOptions.Compiled);
 
@@ -47,7 +47,7 @@ public class ChannelsController : ControllerBase
     {
         var channels = await _db.Channels
             .OrderBy(c => c.Name)
-            .Select(c => new ChannelSummary { Id = c.Id, Name = c.Name })
+            .Select(c => new ChannelSummary { Id = c.Id, Name = c.Name, IsDefault = c.IsDefault })
             .ToListAsync();
         return Ok(channels);
     }
@@ -92,6 +92,7 @@ public class ChannelsController : ControllerBase
     {
         var channel = await _db.Channels.FindAsync(id);
         if (channel == null) return NotFound();
+        if (channel.IsDefault) return BadRequest("The default channel can't be deleted.");
 
         // Dissolve any sync group first (UnlinkAsync reads the channel row, so it must still exist);
         // otherwise surviving members would keep fanning out to this deleted id and throw.

@@ -7,4 +7,5 @@ public class ChannelStateDto
     public int? CurrentAlbumId { get; set; }
     public int? CurrentSlideId { get; set; }
     public bool IsPaused { get; set; }
+    public bool IsDefault { get; set; }
 }
