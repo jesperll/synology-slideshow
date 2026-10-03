@@ -27,6 +27,8 @@ export function AdminPage() {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [statsByChannel, setStatsByChannel] = useState<Record<number, ChannelStats>>({});
   const [statsExpandedId, setStatsExpandedId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     getAlbums().then((response) => setAlbums(response.data));
@@ -128,6 +130,16 @@ export function AdminPage() {
       return;
     }
     setSelectedForLink(new Set());
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmId(null);
+    setDeleteConfirmText('');
+  };
+
+  const confirmDelete = async (channelId: number) => {
+    await deleteChannel(channelId);
+    cancelDelete();
   };
 
   if (!snapshot) {
@@ -240,9 +252,35 @@ export function AdminPage() {
                   </button>
                 </td>
                 <td>
-                  {!channel.isDefault && (
-                    <button onClick={() => deleteChannel(channel.channelId)}>Delete</button>
-                  )}
+                  {!channel.isDefault &&
+                    (deleteConfirmId === channel.channelId ? (
+                      <div className="admin-delete-confirm">
+                        <input
+                          autoFocus
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder={`Type "${channel.name}" to confirm`}
+                        />
+                        <button
+                          className="admin-delete-button"
+                          onClick={() => confirmDelete(channel.channelId)}
+                          disabled={deleteConfirmText !== channel.name}
+                        >
+                          Confirm
+                        </button>
+                        <button onClick={cancelDelete}>Cancel</button>
+                      </div>
+                    ) : (
+                      <button
+                        className="admin-delete-button"
+                        onClick={() => {
+                          setDeleteConfirmId(channel.channelId);
+                          setDeleteConfirmText('');
+                        }}
+                      >
+                        Delete
+                      </button>
+                    ))}
                 </td>
               </tr>
               {expandedChannelId === channel.channelId && channel.currentAlbumId != null && (

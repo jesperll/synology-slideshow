@@ -981,17 +981,35 @@ h1:focus {
     font-size: 0.85rem;
 }
 
-/* The Delete button is always alone in the table's last column. :not([colspan])
-   excludes the single-cell expandable "Jump to slide"/"Stats" rows, which would
-   otherwise also match td:last-child since their lone td is trivially both ends. */
-.admin-channel-table td:last-child:not([colspan]) button {
+.admin-delete-button {
     color: #fca5a5;
     background-color: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.4);
 }
 
-.admin-channel-table td:last-child:not([colspan]) button:hover {
+.admin-delete-button:hover:not(:disabled) {
     background-color: rgba(239, 68, 68, 0.3);
+}
+
+.admin-delete-button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.admin-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.admin-delete-confirm input {
+    width: 9rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.3rem;
 }
 
 .admin-current-slide {

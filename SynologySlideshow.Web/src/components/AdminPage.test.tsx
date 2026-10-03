@@ -33,7 +33,7 @@ describe('AdminPage', () => {
   beforeEach(() => {
     vi.mocked(api.getAlbums).mockResolvedValue({ data: [{ id: 5, name: 'Holiday', thumbnail: '' }] } as any);
     vi.mocked(api.createChannel).mockResolvedValue({ data: { id: 2, name: 'bedroom' } } as any);
-    vi.mocked(api.deleteChannel).mockResolvedValue({} as any);
+    vi.mocked(api.deleteChannel).mockReset().mockResolvedValue({} as any);
     vi.mocked(api.getAlbumSlides).mockResolvedValue({
       data: [
         { id: 10, uri: '/api/albums/5/slides/10.jpg', thumbnailUri: '/api/albums/5/slides/10/thumbnail.jpg', description: '', location: '', date: '' },
@@ -121,14 +121,40 @@ describe('AdminPage', () => {
     expect(requestTogglePause).toHaveBeenCalledWith(1);
   });
 
-  it('deletes a channel through its row button', async () => {
+  it('deletes a channel only after typing its exact name to confirm', async () => {
     mockHook();
 
     render(<AdminPage />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(api.deleteChannel).not.toHaveBeenCalled();
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText('Type "kitchen" to confirm'), { target: { value: 'kitche' } });
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText('Type "kitchen" to confirm'), { target: { value: 'kitchen' } });
+    expect(confirmButton).toBeEnabled();
+
+    fireEvent.click(confirmButton);
 
     await waitFor(() => expect(api.deleteChannel).toHaveBeenCalledWith(1));
+  });
+
+  it('cancels the delete confirmation without deleting', () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.change(screen.getByPlaceholderText('Type "kitchen" to confirm'), { target: { value: 'kitchen' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(api.deleteChannel).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
   });
 
   it('removes the row once the live snapshot no longer includes the channel', () => {
