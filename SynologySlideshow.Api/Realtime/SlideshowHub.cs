@@ -56,6 +56,15 @@ public class SlideshowHub : Hub
         SyncTimersForGroup(channel.Id);
         if (previousChannelId is int previousId) SyncTimersForGroup(previousId);
         await BroadcastPresenceAsync();
+
+        // A viewer showing up to a paused channel almost always means "nobody told it to play
+        // yet" (every channel starts paused) rather than a pause someone wants preserved for
+        // this new viewer - so joining resumes it. TogglePauseAsync already applies to the
+        // whole sync-linked group, not just this channel, which is correct here too.
+        if (channel.IsPaused)
+        {
+            return await _playback.TogglePauseAsync(channel.Id);
+        }
         return await _playback.GetStateAsync(channel.Id);
     }
 
