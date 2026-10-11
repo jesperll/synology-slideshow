@@ -26,7 +26,8 @@ public class ApiController : ControllerBase
         {
             Id = a.Id,
             Name = a.Name,
-            Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id })
+            Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id }),
+            PhotoCount = _source.GetSlides(a.Id).Length
         }));
     }
 
@@ -35,7 +36,13 @@ public class ApiController : ControllerBase
     {
         var a = _source.GetAlbum(id);
         if (a == null) return NotFound();
-        return Ok(new Album { Id = a.Id, Name = a.Name, Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id }) });
+        return Ok(new Album
+        {
+            Id = a.Id,
+            Name = a.Name,
+            Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id }),
+            PhotoCount = _source.GetSlides(a.Id).Length
+        });
     }
 
     [HttpGet("albums/{id}/thumbnail.jpg", Name = "AlbumThumbnail")]
@@ -56,7 +63,8 @@ public class ApiController : ControllerBase
             Date = s.Date,
             Description = s.Description,
             Location = s.Location,
-            Uri = Url.RouteUrl("SlidePhoto", new { id = id, slide = s.Id })
+            Uri = Url.RouteUrl("SlidePhoto", new { id = id, slide = s.Id }),
+            ThumbnailUri = Url.RouteUrl("SlideThumbnail", new { id = id, slide = s.Id })
         }));
     }
 
@@ -66,5 +74,13 @@ public class ApiController : ControllerBase
         var a = _source.GetSlide(id, slide);
         if (a == null) return NotFound();
         return File(await _client.GetStreamAsync(a.Uri), "image/jpeg");
+    }
+
+    [HttpGet("albums/{id}/slides/{slide}/thumbnail.jpg", Name = "SlideThumbnail")]
+    public async Task<IActionResult> SlideThumbnail(int id, int slide)
+    {
+        var a = _source.GetSlide(id, slide);
+        if (a == null) return NotFound();
+        return File(await _client.GetStreamAsync(a.ThumbnailUri), "image/jpeg");
     }
 }

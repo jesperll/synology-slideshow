@@ -458,6 +458,12 @@ h1:focus {
         text-transform: uppercase;
     }
 
+    .album-info .photo-count {
+        display: block;
+        font-size: 0.85rem;
+        opacity: 0.85;
+    }
+
     .album-info .selected-indicator {
         display: inline-flex;
         align-items: center;
@@ -782,4 +788,546 @@ h1:focus {
 .update-notification-btn-secondary:hover {
     background: rgba(255, 255, 255, 0.1);
     color: white;
+}
+
+/* Channel picker / channel-leave (rendered as a setting-group inside the Settings card) */
+.channel-picker-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.channel-picker-list button {
+    padding: 0.65rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.channel-picker-list button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.channel-leave {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.channel-leave p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.channel-leave button {
+    padding: 0.65rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.channel-leave button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Admin page */
+.admin-page {
+    max-height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    max-width: 90rem;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+}
+
+.admin-page h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.admin-page > p {
+    margin: 0 0 2rem 0;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-page form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-page form input {
+    min-width: 14rem;
+    padding: 0.65rem 1rem;
+    font-size: 1rem;
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+}
+
+.admin-page form input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.admin-page form input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.admin-page button {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.95rem;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.admin-page button:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.admin-page button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.admin-error {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+}
+
+.admin-link-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-refresh-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-refresh-success {
+    color: #4ade80;
+    font-size: 0.9rem;
+}
+
+.admin-channel-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.admin-channel-table th {
+    padding: 0.85rem 0.6rem;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-channel-table td {
+    padding: 0.85rem 0.6rem;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-channel-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-channel-table td a {
+    color: white;
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+}
+
+.admin-channel-table td a:hover {
+    border-bottom-style: solid;
+}
+
+.admin-channel-table input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+}
+
+.admin-channel-table select {
+    max-width: 12rem;
+    padding: 0.4rem 0.6rem;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.4rem;
+}
+
+/* The select itself is styled above, but its open dropdown list is a native
+   popup that doesn't inherit the translucent background - without an explicit
+   background here it renders white-on-white (white text inherited, white/default
+   native popup background). */
+.admin-channel-table select option {
+    color: white;
+    background-color: #222;
+}
+
+/* Below this width the nine columns don't fit with the controls on one row, so they wrap
+   onto two lines instead of pushing the table (and the Delete button) off-screen. */
+@media (min-width: 1300px) {
+    .admin-channel-table td[data-label="Controls"] {
+        white-space: nowrap;
+    }
+}
+
+.admin-channel-table button {
+    margin: 0.15rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.admin-delete-button {
+    color: #fca5a5;
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.admin-delete-button:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.3);
+}
+
+.admin-delete-button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.admin-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.admin-delete-confirm input {
+    width: 9rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.3rem;
+}
+
+.admin-current-slide {
+    display: block;
+    border-radius: 0.3rem;
+}
+
+.admin-slide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+    gap: 0.6rem;
+    list-style: none;
+    margin: 0.5rem 0;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0.5rem;
+}
+
+.admin-slide-grid li {
+    aspect-ratio: 4 / 3;
+}
+
+.admin-slide-grid li button {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.admin-slide-grid li button img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-slide-grid li button:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.admin-slide-grid li button.selected {
+    border-color: #4ade80;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+}
+
+/* A link that has to sit in a row of real buttons, so it copies the button box exactly: the
+   browser's default button font (Arial, not the page font) and the table's smaller padding. */
+.admin-channel-table td a.admin-link-button {
+    display: inline-block;
+    margin: 0.15rem;
+    padding: 0.4rem 0.8rem;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.85rem;
+    line-height: normal;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.admin-channel-table td a.admin-link-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Per-channel stats page */
+.stats-page a {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.stats-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.stats-tile,
+.stats-card {
+    padding: 1.25rem 1.5rem;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 0.75rem;
+}
+
+.stats-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stats-tile-value {
+    font-size: 2rem;
+    font-weight: 300;
+}
+
+.stats-tile-label,
+.stats-axis-caption {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stats-card {
+    margin-bottom: 1.5rem;
+}
+
+.stats-card h2 {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stats-histogram {
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    height: 14rem;
+    padding-top: 1.25rem;
+    overflow-x: auto;
+}
+
+.stats-bar-column {
+    flex: 1 1 0;
+    min-width: 1.6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+.stats-bar {
+    width: 100%;
+    min-height: 2px;
+    background-color: #60a5fa;
+    border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.stats-bar-column.never-shown .stats-bar {
+    background-color: #fbbf24;
+}
+
+.stats-bar-value,
+.stats-bar-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.stats-axis-caption {
+    margin: 0.75rem 0 0 0;
+    text-align: center;
+}
+
+.stats-lists {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1.5rem;
+}
+
+.stats-photo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.stats-photo-list li {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.25rem;
+    color: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+}
+
+.stats-photo-list li:hover,
+.stats-photo-list li:focus {
+    background-color: rgba(255, 255, 255, 0.06);
+    outline: none;
+}
+
+.stats-photo-views {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stats-photo-preview {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    z-index: 10;
+    transform: translateX(-50%);
+    width: 14rem;
+    max-width: 80vw;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+
+/* Below this width the channel table reflows into one stacked card per channel - a 9-column
+   table has no reasonable fit on a phone, scrolling it sideways is unpleasant to use, and the
+   Controls cell's five buttons need their own full-width row to wrap sensibly anyway. */
+@media (max-width: 768px) {
+    .admin-page {
+        padding: 1.5rem 1rem 3rem;
+    }
+
+    .admin-page form input {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .admin-channel-table thead {
+        display: none;
+    }
+
+    .admin-channel-table,
+    .admin-channel-table tbody,
+    .admin-channel-table tr,
+    .admin-channel-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-channel-table tr {
+        margin-bottom: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .admin-channel-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .admin-channel-table td {
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .admin-channel-table tr > td:last-child {
+        border-bottom: none;
+    }
+
+    .admin-channel-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.3rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .admin-channel-table select {
+        max-width: none;
+        width: 100%;
+    }
+
+    .admin-delete-confirm {
+        flex-wrap: wrap;
+    }
+
+    .admin-delete-confirm input {
+        width: 100%;
+    }
+
+    .admin-slide-grid {
+        grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+    }
 }

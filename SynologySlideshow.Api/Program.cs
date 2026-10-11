@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using SynologySlideshow.Api.Data;
+using SynologySlideshow.Api.Realtime;
 using SynologySlideshow.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,7 +35,27 @@ builder.Services.Configure<SynologyOptions>(
 // Add SlideShow service
 builder.Services.AddSingleton<SlideShowService>();
 
+// Channel persistence
+Directory.CreateDirectory("data");
+builder.Services.AddDbContext<SlideshowDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("Slideshow") ?? "Data Source=data/slideshow.db"));
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ISlideSource, SlideShowSlideSource>();
+builder.Services.AddSingleton<SyncGroupService>();
+builder.Services.AddSingleton<ChannelPlaybackService>();
+builder.Services.AddHostedService<DefaultChannelSeeder>();
+builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddScoped<AdminSnapshotService>();
+builder.Services.AddSingleton<ViewStatsService>();
+builder.Services.AddHostedService<MidnightRefreshService>();
+
 var app = builder.Build();
+
+using (var migrationScope = app.Services.CreateScope())
+{
+    migrationScope.ServiceProvider.GetRequiredService<SlideshowDbContext>().Database.Migrate();
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -49,6 +72,7 @@ app.UseCors(); // Enable CORS
 app.UseRouting();
 
 app.MapControllers();
+app.MapHub<SlideshowHub>("/hub/slideshow");
 
 // Fallback to index.html for client-side routing
 app.MapFallbackToFile("index.html");
@@ -57,3 +81,5 @@ app.MapFallbackToFile("index.html");
 await app.Services.GetRequiredService<SlideShowService>().InitAsync();
 
 app.Run();
+
+public partial class Program { }
