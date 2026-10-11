@@ -31,7 +31,8 @@ describe('AdminPage', () => {
     });
 
   beforeEach(() => {
-    vi.mocked(api.getAlbums).mockResolvedValue({ data: [{ id: 5, name: 'Holiday', thumbnail: '' }] } as any);
+    vi.mocked(api.getAlbums).mockResolvedValue({ data: [{ id: 5, name: 'Holiday', thumbnail: '', photoCount: 120 }] } as any);
+    vi.mocked(api.shuffleLibrary).mockReset().mockResolvedValue({} as any);
     vi.mocked(api.createChannel).mockResolvedValue({ data: { id: 2, name: 'bedroom' } } as any);
     vi.mocked(api.deleteChannel).mockReset().mockResolvedValue({} as any);
     vi.mocked(api.refreshLibrary).mockReset().mockResolvedValue({} as any);
@@ -222,6 +223,48 @@ describe('AdminPage', () => {
 
     expect(await screen.findByText('Could not refresh the library.')).toBeInTheDocument();
     expect(screen.queryByText('Library refreshed.')).not.toBeInTheDocument();
+  });
+
+  it('shuffles the photos and shows a success message', async () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Shuffle photos' }));
+
+    await waitFor(() => expect(api.shuffleLibrary).toHaveBeenCalled());
+    expect(await screen.findByText('Photos shuffled.')).toBeInTheDocument();
+  });
+
+  it('shows an error message when the shuffle request fails', async () => {
+    mockHook();
+    vi.mocked(api.shuffleLibrary).mockRejectedValue(new Error('network down'));
+
+    render(<AdminPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Shuffle photos' }));
+
+    expect(await screen.findByText('Could not shuffle the library.')).toBeInTheDocument();
+    expect(screen.queryByText('Photos shuffled.')).not.toBeInTheDocument();
+  });
+
+  it('shows each album\'s photo count in the album selector', async () => {
+    mockHook();
+
+    render(<AdminPage />);
+
+    expect(await screen.findByRole('option', { name: 'Holiday (120)' })).toBeInTheDocument();
+  });
+
+  it('shows how many photos were never shown when Stats is expanded', async () => {
+    mockHook();
+    vi.mocked(api.getChannelStats).mockResolvedValue({
+      data: { totalViews: 5, topViewed: [], leastViewed: [], neverViewedCount: 42 }
+    } as any);
+
+    render(<AdminPage />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Stats' })[0]);
+
+    expect(await screen.findByText('Never shown: 42 photos')).toBeInTheDocument();
   });
 
   it('removes the row once the live snapshot no longer includes the channel', () => {

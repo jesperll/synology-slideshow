@@ -76,6 +76,37 @@ public class ViewStatsServiceTests : IDisposable
         Assert.Equal(20, stats.LeastViewed.First().SlideId);
     }
 
+    [Fact]
+    public async Task PhotosThatWereNeverShownCountAsZeroViewsWhenTheAlbumIsKnown()
+    {
+        await _stats.RecordViewAsync(1, 10);
+        await _stats.RecordViewAsync(1, 10);
+        await _stats.RecordViewAsync(1, 20);
+
+        var stats = await _stats.GetStatsAsync(1, new[] { 10, 20, 30, 40 });
+
+        Assert.Equal(2, stats.NeverViewedCount);
+        Assert.Equal(0, stats.LeastViewed.First().ViewCount);
+        Assert.Contains(stats.LeastViewed, s => s.SlideId == 30 && s.ViewCount == 0);
+        Assert.Equal(10, stats.TopViewed.First().SlideId);
+        Assert.Equal(3, stats.TotalViews);
+    }
+
+    [Fact]
+    public async Task RankingsOnlyCoverThePhotosInTheGivenAlbum()
+    {
+        await _stats.RecordViewAsync(1, 10);
+        await _stats.RecordViewAsync(1, 99); // from an album the channel no longer shows
+        await _stats.RecordViewAsync(1, 99);
+
+        var stats = await _stats.GetStatsAsync(1, new[] { 10 });
+
+        Assert.DoesNotContain(stats.TopViewed, s => s.SlideId == 99);
+        Assert.DoesNotContain(stats.LeastViewed, s => s.SlideId == 99);
+        Assert.Equal(3, stats.TotalViews);
+        Assert.Equal(0, stats.NeverViewedCount);
+    }
+
     public void Dispose()
     {
         _provider.Dispose();

@@ -458,6 +458,12 @@ h1:focus {
         text-transform: uppercase;
     }
 
+    .album-info .photo-count {
+        display: block;
+        font-size: 0.85rem;
+        opacity: 0.85;
+    }
+
     .album-info .selected-indicator {
         display: inline-flex;
         align-items: center;

@@ -25,4 +25,11 @@ public class AdminController : ControllerBase
         await _slideShowService.RefreshAsync();
         return NoContent();
     }
+
+    [HttpPost("shuffle")]
+    public async Task<IActionResult> Shuffle()
+    {
+        await _slideShowService.ShuffleAsync();
+        return NoContent();
+    }
 }

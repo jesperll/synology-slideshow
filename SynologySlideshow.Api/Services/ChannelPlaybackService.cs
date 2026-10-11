@@ -51,8 +51,11 @@ public class ChannelPlaybackService
         return ToDto(channel);
     }
 
-    public Task<ChannelStateDto> AdvanceAsync(int channelId, int offset) =>
-        ApplyToGroupAsync(channelId, id => AdvanceOneAsync(id, offset));
+    public async Task<ChannelStateDto> AdvanceAsync(int channelId, int offset)
+    {
+        var targetSlideId = await ResolveAdvanceTargetAsync(channelId, offset);
+        return await ApplyToGroupAsync(channelId, id => AdvanceOneAsync(id, offset, targetSlideId));
+    }
 
     public Task<ChannelStateDto> JumpAsync(int channelId, int slideId) =>
         ApplyToGroupAsync(channelId, id => JumpOneAsync(id, slideId));
@@ -144,10 +147,32 @@ public class ChannelPlaybackService
         var slides = GetSlides(channel.CurrentAlbumId);
         if (slides.Length == 0) return;
 
+        var targetSlideId = await ResolveAdvanceTargetAsync(channelId, 1);
         foreach (var memberId in members)
         {
-            await AdvanceOneAsync(memberId, 1);
+            await AdvanceOneAsync(memberId, 1, targetSlideId);
         }
+    }
+
+    // Stepping forward off the end of an album's order finishes a pass: reshuffle so the next
+    // pass differs, and return the slide every group member should land on. Resolved once for
+    // the whole group, since each member reshuffling on its own would leave them out of sync.
+    private async Task<int?> ResolveAdvanceTargetAsync(int originId, int offset)
+    {
+        if (offset != 1) return null;
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
+        var channel = await db.Channels.FindAsync(originId);
+        if (channel?.CurrentAlbumId is not int albumId) return null;
+
+        var slides = GetSlides(albumId);
+        var current = CurrentSlideIndex(channel, slides);
+        if (slides.Length < 2 || current != slides.Length - 1) return null;
+
+        _slideSource.ReshuffleAlbum(albumId, slides[current].Id);
+        var reshuffled = GetSlides(albumId);
+        return reshuffled.Length > 0 ? reshuffled[0].Id : null;
     }
 
     public void StartTimer(int channelId)
@@ -199,7 +224,7 @@ public class ChannelPlaybackService
         return originResult!;
     }
 
-    private async Task<ChannelStateDto> AdvanceOneAsync(int channelId, int offset)
+    private async Task<ChannelStateDto> AdvanceOneAsync(int channelId, int offset, int? targetSlideId = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SlideshowDbContext>();
@@ -208,8 +233,11 @@ public class ChannelPlaybackService
         var slides = GetSlides(channel.CurrentAlbumId);
         if (slides.Length > 0)
         {
+            var targetIndex = targetSlideId is int target ? Array.FindIndex(slides, s => s.Id == target) : -1;
             var current = CurrentSlideIndex(channel, slides);
-            var next = ((current + offset) % slides.Length + slides.Length) % slides.Length;
+            var next = targetIndex >= 0
+                ? targetIndex
+                : ((current + offset) % slides.Length + slides.Length) % slides.Length;
             channel.CurrentSlideId = slides[next].Id;
             await db.SaveChangesAsync();
         }

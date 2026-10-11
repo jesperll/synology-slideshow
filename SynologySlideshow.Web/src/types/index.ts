@@ -2,6 +2,7 @@ export interface Album {
   id: number;
   name: string;
   thumbnail: string;
+  photoCount: number;
 }
 
 export interface Slide {
@@ -77,4 +78,5 @@ export interface ChannelStats {
   totalViews: number;
   topViewed: SlideViewStat[];
   leastViewed: SlideViewStat[];
+  neverViewedCount: number;
 }

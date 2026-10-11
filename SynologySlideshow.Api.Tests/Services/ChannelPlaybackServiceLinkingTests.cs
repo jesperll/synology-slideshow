@@ -79,6 +79,20 @@ public class ChannelPlaybackServiceLinkingTests : IDisposable
     }
 
     [Fact]
+    public async Task FinishingAPassReshufflesOnceAndKeepsEveryMemberOnTheSameSlide()
+    {
+        await _playback.LinkAsync(new[] { _channelA, _channelB });
+        await _playback.JumpAsync(_channelA, 30); // last slide of album 1's pass, for both members
+        _slides.NextReshuffledOrder = new[] { 20, 30, 10 };
+
+        await _playback.AdvanceAsync(_channelA, 1);
+
+        Assert.Single(_slides.ReshuffleCalls);
+        Assert.Equal(20, (await _playback.GetStateAsync(_channelA)).CurrentSlideId);
+        Assert.Equal(20, (await _playback.GetStateAsync(_channelB)).CurrentSlideId);
+    }
+
+    [Fact]
     public async Task AdvancingOneMemberAdvancesEveryMember()
     {
         await _playback.LinkAsync(new[] { _channelA, _channelB });

@@ -28,4 +28,16 @@ public class AdminControllerTests : IClassFixture<SlideshowApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(callsBefore + 1, slideShowService.RefreshCallCount);
     }
+
+    [Fact]
+    public async Task ShuffleReturnsNoContentAndReshufflesTheLibrary()
+    {
+        var slideShowService = (TestSlideShowService)_factory.Services.GetRequiredService<SlideShowService>();
+        var callsBefore = slideShowService.ShuffleCallCount;
+
+        var response = await _client.PostAsync("/api/admin/shuffle", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(callsBefore + 1, slideShowService.ShuffleCallCount);
+    }
 }

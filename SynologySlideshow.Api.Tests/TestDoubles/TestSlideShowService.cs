@@ -26,4 +26,12 @@ public class TestSlideShowService : SlideShowService
         RefreshCallCount++;
         return Task.CompletedTask;
     }
+
+    public int ShuffleCallCount { get; private set; }
+
+    public override Task ShuffleAsync()
+    {
+        ShuffleCallCount++;
+        return Task.CompletedTask;
+    }
 }

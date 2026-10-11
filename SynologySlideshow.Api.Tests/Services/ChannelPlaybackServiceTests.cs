@@ -59,6 +59,43 @@ public class ChannelPlaybackServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task FinishingAPassReshufflesTheAlbumAndContinuesFromTheNewFirstSlide()
+    {
+        await _playback.JumpAsync(_channelId, 30); // last slide of the pass
+        _slides.NextReshuffledOrder = new[] { 20, 30, 10 };
+
+        var state = await _playback.AdvanceAsync(_channelId, 1);
+
+        var call = Assert.Single(_slides.ReshuffleCalls);
+        Assert.Equal((1, 30), call);
+        Assert.Equal(20, state.CurrentSlideId);
+    }
+
+    [Fact]
+    public async Task AdvancingMidPassNeverReshuffles()
+    {
+        await _playback.JumpAsync(_channelId, 10);
+
+        await _playback.AdvanceAsync(_channelId, 1);
+        await _playback.AdvanceAsync(_channelId, -1);
+        await _playback.AdvanceAsync(_channelId, -1); // backwards past the start wraps without a reshuffle
+
+        Assert.Empty(_slides.ReshuffleCalls);
+    }
+
+    [Fact]
+    public async Task AnAlbumWithASingleSlideNeverReshuffles()
+    {
+        _slides.SlidesByAlbum[2] = new[] { new SlideRef(100) };
+        await _playback.SetAlbumAsync(_channelId, 2);
+
+        var state = await _playback.AdvanceAsync(_channelId, 1);
+
+        Assert.Empty(_slides.ReshuffleCalls);
+        Assert.Equal(100, state.CurrentSlideId);
+    }
+
+    [Fact]
     public async Task JumpToSlideSetsExactSlide()
     {
         var state = await _playback.JumpAsync(_channelId, 30);
@@ -212,6 +249,8 @@ public class ChannelPlaybackServiceTests : IDisposable
     private class ThrowingSlideSource : ISlideSource
     {
         public SlideRef[] GetSlides(int albumId) => throw new InvalidOperationException("boom");
+
+        public void ReshuffleAlbum(int albumId, int avoidFirstSlideId) => throw new InvalidOperationException("boom");
     }
 
     public void Dispose()

@@ -19,6 +19,7 @@ export function AlbumGrid({ albums, currentAlbumId, onSelectAlbum }: AlbumGridPr
         >
           <div className="album-info">
             <span className="title">{album.name}</span>
+            <span className="photo-count">{album.photoCount} photos</span>
             {album.id === currentAlbumId && (
               <span className="selected-indicator">
                 <span className="indicator-dot"></span>

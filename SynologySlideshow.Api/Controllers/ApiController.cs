@@ -26,7 +26,8 @@ public class ApiController : ControllerBase
         {
             Id = a.Id,
             Name = a.Name,
-            Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id })
+            Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id }),
+            PhotoCount = _source.GetSlides(a.Id).Length
         }));
     }
 
@@ -35,7 +36,13 @@ public class ApiController : ControllerBase
     {
         var a = _source.GetAlbum(id);
         if (a == null) return NotFound();
-        return Ok(new Album { Id = a.Id, Name = a.Name, Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id }) });
+        return Ok(new Album
+        {
+            Id = a.Id,
+            Name = a.Name,
+            Thumbnail = Url.RouteUrl("AlbumThumbnail", new { id = a.Id }),
+            PhotoCount = _source.GetSlides(a.Id).Length
+        });
     }
 
     [HttpGet("albums/{id}/thumbnail.jpg", Name = "AlbumThumbnail")]

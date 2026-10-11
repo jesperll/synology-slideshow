@@ -21,3 +21,4 @@ export const getAdminSnapshot = () => api.get<AdminSnapshot>('/admin/snapshot');
 export const getChannelStats = (channelId: number) => api.get<ChannelStats>(`/channels/${channelId}/stats`);
 
 export const refreshLibrary = () => api.post('/admin/refresh');
+export const shuffleLibrary = () => api.post('/admin/shuffle');

@@ -11,4 +11,7 @@ public class SlideShowSlideSource : ISlideSource
 
     public SlideRef[] GetSlides(int albumId) =>
         _slideShowService.SlideShow.GetSlides(albumId).Select(s => new SlideRef(s.Id)).ToArray();
+
+    public void ReshuffleAlbum(int albumId, int avoidFirstSlideId) =>
+        _slideShowService.SlideShow.Reshuffle(albumId, avoidFirstSlideId);
 }

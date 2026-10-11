@@ -1,7 +1,7 @@
 import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAdminConnection } from '../hooks/useAdminConnection';
-import { createChannel, deleteChannel, getAlbums, getAlbumSlides, getChannelStats, refreshLibrary } from '../services/api';
+import { createChannel, deleteChannel, getAlbums, getAlbumSlides, getChannelStats, refreshLibrary, shuffleLibrary } from '../services/api';
 import { Album, ChannelStats, Slide } from '../types';
 
 export function AdminPage() {
@@ -32,6 +32,9 @@ export function AdminPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshedJustNow, setRefreshedJustNow] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [shuffleError, setShuffleError] = useState<string | null>(null);
+  const [shuffledJustNow, setShuffledJustNow] = useState(false);
   // Points at whichever slide-grid button is currently marked "selected", so the grid can
   // scroll to it as soon as it opens instead of leaving the admin to hunt for it.
   const selectedSlideRef = useRef<HTMLButtonElement | null>(null);
@@ -168,6 +171,20 @@ export function AdminPage() {
     }
   };
 
+  const handleShuffle = async () => {
+    setIsShuffling(true);
+    setShuffleError(null);
+    setShuffledJustNow(false);
+    try {
+      await shuffleLibrary();
+      setShuffledJustNow(true);
+    } catch {
+      setShuffleError('Could not shuffle the library.');
+    } finally {
+      setIsShuffling(false);
+    }
+  };
+
   if (!snapshot) {
     return <p>Loading…</p>;
   }
@@ -182,6 +199,11 @@ export function AdminPage() {
         </button>
         {refreshedJustNow && <span className="admin-refresh-success">Library refreshed.</span>}
         {refreshError && <span className="admin-error">{refreshError}</span>}
+        <button onClick={handleShuffle} disabled={isShuffling}>
+          {isShuffling ? 'Shuffling…' : 'Shuffle photos'}
+        </button>
+        {shuffledJustNow && <span className="admin-refresh-success">Photos shuffled.</span>}
+        {shuffleError && <span className="admin-error">{shuffleError}</span>}
       </div>
 
       <form onSubmit={handleCreate}>
@@ -248,7 +270,7 @@ export function AdminPage() {
                     </option>
                     {albums.map((album) => (
                       <option key={album.id} value={album.id}>
-                        {album.name}
+                        {album.name} ({album.photoCount})
                       </option>
                     ))}
                   </select>
@@ -352,6 +374,9 @@ export function AdminPage() {
                   <td colSpan={9}>
                     <div className="admin-stats">
                       <p>Total views: {statsByChannel[channel.channelId].totalViews}</p>
+                      {statsByChannel[channel.channelId].neverViewedCount > 0 && (
+                        <p>Never shown: {statsByChannel[channel.channelId].neverViewedCount} photos</p>
+                      )}
                       <div>
                         <strong>Most viewed:</strong>
                         <ul>
