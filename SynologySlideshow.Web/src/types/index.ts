@@ -74,9 +74,18 @@ export interface SlideViewStat {
   viewCount: number;
 }
 
+export interface ViewCountBucket {
+  viewCount: number;
+  photoCount: number;
+}
+
 export interface ChannelStats {
   totalViews: number;
   topViewed: SlideViewStat[];
   leastViewed: SlideViewStat[];
   neverViewedCount: number;
+  photoCount: number;
+  histogram: ViewCountBucket[];
+  channelName: string | null;
+  albumId: number | null;
 }

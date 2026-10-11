@@ -255,16 +255,12 @@ describe('AdminPage', () => {
     expect(await screen.findByRole('option', { name: 'Holiday (120)' })).toBeInTheDocument();
   });
 
-  it('shows how many photos were never shown when Stats is expanded', async () => {
+  it("links each channel's Stats button to its stats page", () => {
     mockHook();
-    vi.mocked(api.getChannelStats).mockResolvedValue({
-      data: { totalViews: 5, topViewed: [], leastViewed: [], neverViewedCount: 42 }
-    } as any);
 
     render(<AdminPage />);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Stats' })[0]);
 
-    expect(await screen.findByText('Never shown: 42 photos')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Stats' })).toHaveAttribute('href', '/admin/channels/1/stats');
   });
 
   it('removes the row once the live snapshot no longer includes the channel', () => {
@@ -452,34 +448,5 @@ describe('AdminPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Unlink' })[0]);
 
     expect(requestUnlink).toHaveBeenCalledWith(1);
-  });
-
-  it('shows total views and top/least viewed slides when Stats is expanded', async () => {
-    mockHook();
-    vi.mocked(api.getChannelStats).mockResolvedValue({
-      data: { totalViews: 5, topViewed: [{ slideId: 10, viewCount: 3 }], leastViewed: [{ slideId: 20, viewCount: 2 }] }
-    } as any);
-
-    render(<AdminPage />);
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Stats' })[0]);
-
-    expect(await screen.findByText('Total views: 5')).toBeInTheDocument();
-    expect(screen.getByText('Slide #10 — 3 views')).toBeInTheDocument();
-    expect(screen.getByText('Slide #20 — 2 views')).toBeInTheDocument();
-  });
-
-  it('does not crash or expand the stats panel when getChannelStats rejects', async () => {
-    mockHook();
-    vi.mocked(api.getChannelStats).mockRejectedValue(new Error('network error'));
-
-    render(<AdminPage />);
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Stats' })[0]);
-
-    await waitFor(() => expect(api.getChannelStats).toHaveBeenCalled());
-
-    expect(screen.queryByText(/Total views:/)).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Stats' })[0]).toBeInTheDocument();
   });
 });

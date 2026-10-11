@@ -19,7 +19,7 @@ SynologySlideshow is a web-based slideshow viewer with a sleek React interface a
 - 💾 Per-device settings persistence
 - 📺 Multi-device "channels" — point any number of screens at a shared, synchronized slideshow
 - 🛠️ Admin dashboard — manage channels, control playback remotely, link channels for synced playback, view stats
-- 📊 Per-channel view statistics (total/most/least-viewed photos)
+- 📊 Per-channel stats page — views histogram, most/least-viewed photos with thumbnails
 - 🔄 Automatic (nightly) and on-demand photo library refresh
 - 🐳 Docker deployment ready
 
@@ -105,7 +105,7 @@ The **Admin page** (`/admin`) is the control room for all of this:
 - Create and delete channels (the Default channel can't be renamed or deleted)
 - See every channel's live viewer count, status, and current slide, and switch its album, jump to a slide, or step through images remotely
 - **Link** two or more channels so they play in sync, like a multi-room audio system — handy for keeping several screens around the house showing exactly the same photo at the same time
-- View each channel's total/most/least-viewed photo stats
+- Open a channel's stats page (the Stats button) for a histogram of how many photos have been shown 0, 1, 2… times, plus its most and least viewed photos — hover (or tap) a photo to see its thumbnail
 - Refresh the photo library on demand (it also refreshes automatically every night) to pick up photos you've just added on the NAS. A refresh keeps the current photo order and slots new photos in at random positions, so it never restarts anyone's progress through the album
 - Shuffle the photos to give every album a brand-new random order (each channel carries on from its current photo). A fresh order is also picked automatically each time a channel has shown every photo in an album once
 - See each album's photo count in the album selectors, and how many photos a channel has never shown

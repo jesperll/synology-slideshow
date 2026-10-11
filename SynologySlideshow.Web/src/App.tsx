@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { RootRoute } from './components/RootRoute';
 import { ChannelView } from './components/ChannelView';
 import { AdminPage } from './components/AdminPage';
+import { StatsPage } from './components/StatsPage';
 import { UpdateNotification } from './components/UpdateNotification';
 import { useVersionCheck } from './hooks/useVersionCheck';
 
@@ -15,6 +16,7 @@ function App() {
       <Routes>
         <Route path="/" element={<RootRoute />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/channels/:channelId/stats" element={<StatsPage />} />
         <Route path="/:channelName" element={<ChannelView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

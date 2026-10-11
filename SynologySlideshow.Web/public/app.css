@@ -1089,43 +1089,158 @@ h1:focus {
     box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
 }
 
-.admin-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2rem;
-    padding: 1.25rem 1.5rem;
-    background: rgba(0, 0, 0, 0.3);
+.admin-channel-table td a.admin-link-button {
+    display: inline-block;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.95rem;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 0.5rem;
+    transition: all 0.2s;
 }
 
-.admin-stats > p {
-    width: 100%;
-    margin: 0 0 0.5rem 0;
-    font-size: 1.1rem;
-    font-weight: 600;
+.admin-channel-table td a.admin-link-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
-.admin-stats strong {
-    display: block;
-    margin-bottom: 0.5rem;
+/* Per-channel stats page */
+.stats-page a {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.stats-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.stats-tile,
+.stats-card {
+    padding: 1.25rem 1.5rem;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 0.75rem;
+}
+
+.stats-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stats-tile-value {
+    font-size: 2rem;
+    font-weight: 300;
+}
+
+.stats-tile-label,
+.stats-axis-caption {
     font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stats-card {
+    margin-bottom: 1.5rem;
+}
+
+.stats-card h2 {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: rgba(255, 255, 255, 0.6);
 }
 
-.admin-stats ul {
-    min-width: 12rem;
+.stats-histogram {
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    height: 14rem;
+    padding-top: 1.25rem;
+    overflow-x: auto;
+}
+
+.stats-bar-column {
+    flex: 1 1 0;
+    min-width: 1.6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+.stats-bar {
+    width: 100%;
+    min-height: 2px;
+    background-color: #60a5fa;
+    border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.stats-bar-column.never-shown .stats-bar {
+    background-color: #fbbf24;
+}
+
+.stats-bar-value,
+.stats-bar-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.stats-axis-caption {
+    margin: 0.75rem 0 0 0;
+    text-align: center;
+}
+
+.stats-lists {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1.5rem;
+}
+
+.stats-photo-list {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.admin-stats li {
-    padding: 0.3rem 0;
+.stats-photo-list li {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.25rem;
     color: rgba(255, 255, 255, 0.85);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+}
+
+.stats-photo-list li:hover,
+.stats-photo-list li:focus {
+    background-color: rgba(255, 255, 255, 0.06);
+    outline: none;
+}
+
+.stats-photo-views {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stats-photo-preview {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    z-index: 10;
+    transform: translateX(-50%);
+    width: 14rem;
+    max-width: 80vw;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
 }
 
 /* Below this width the channel table reflows into one stacked card per channel - a 9-column

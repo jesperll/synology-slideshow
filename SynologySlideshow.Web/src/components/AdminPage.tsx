@@ -1,8 +1,8 @@
 import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAdminConnection } from '../hooks/useAdminConnection';
-import { createChannel, deleteChannel, getAlbums, getAlbumSlides, getChannelStats, refreshLibrary, shuffleLibrary } from '../services/api';
-import { Album, ChannelStats, Slide } from '../types';
+import { createChannel, deleteChannel, getAlbums, getAlbumSlides, refreshLibrary, shuffleLibrary } from '../services/api';
+import { Album, Slide } from '../types';
 
 export function AdminPage() {
   const {
@@ -25,8 +25,6 @@ export function AdminPage() {
   const requestedAlbumsRef = useRef(new Set<number>());
   const [selectedForLink, setSelectedForLink] = useState<Set<number>>(new Set());
   const [linkError, setLinkError] = useState<string | null>(null);
-  const [statsByChannel, setStatsByChannel] = useState<Record<number, ChannelStats>>({});
-  const [statsExpandedId, setStatsExpandedId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -106,23 +104,6 @@ export function AdminPage() {
       await loadSlidesFor(albumId);
     }
     setExpandedChannelId(channelId);
-  };
-
-  const toggleStats = async (channelId: number) => {
-    if (statsExpandedId === channelId) {
-      setStatsExpandedId(null);
-      return;
-    }
-    if (!statsByChannel[channelId]) {
-      try {
-        const response = await getChannelStats(channelId);
-        setStatsByChannel((current) => ({ ...current, [channelId]: response.data }));
-      } catch (error) {
-        console.warn('Failed to load stats for channel', channelId, error);
-        return;
-      }
-    }
-    setStatsExpandedId(channelId);
   };
 
   const toggleSelectedForLink = (channelId: number) => {
@@ -311,9 +292,9 @@ export function AdminPage() {
                   <button onClick={() => toggleExpanded(channel.channelId, channel.currentAlbumId)}>
                     {expandedChannelId === channel.channelId ? 'Hide slides' : 'Jump to slide…'}
                   </button>
-                  <button onClick={() => toggleStats(channel.channelId)}>
-                    {statsExpandedId === channel.channelId ? 'Hide stats' : 'Stats'}
-                  </button>
+                  <a className="admin-link-button" href={`/admin/channels/${channel.channelId}/stats`}>
+                    Stats
+                  </a>
                 </td>
                 <td>
                   {!channel.isDefault &&
@@ -366,38 +347,6 @@ export function AdminPage() {
                         );
                       })}
                     </ul>
-                  </td>
-                </tr>
-              )}
-              {statsExpandedId === channel.channelId && statsByChannel[channel.channelId] && (
-                <tr>
-                  <td colSpan={9}>
-                    <div className="admin-stats">
-                      <p>Total views: {statsByChannel[channel.channelId].totalViews}</p>
-                      {statsByChannel[channel.channelId].neverViewedCount > 0 && (
-                        <p>Never shown: {statsByChannel[channel.channelId].neverViewedCount} photos</p>
-                      )}
-                      <div>
-                        <strong>Most viewed:</strong>
-                        <ul>
-                          {statsByChannel[channel.channelId].topViewed.map((s) => (
-                            <li key={s.slideId}>
-                              Slide #{s.slideId} — {s.viewCount} views
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <strong>Least viewed:</strong>
-                        <ul>
-                          {statsByChannel[channel.channelId].leastViewed.map((s) => (
-                            <li key={s.slideId}>
-                              Slide #{s.slideId} — {s.viewCount} views
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
                   </td>
                 </tr>
               )}

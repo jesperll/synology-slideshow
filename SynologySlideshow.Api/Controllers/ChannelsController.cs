@@ -119,7 +119,8 @@ public class ChannelsController : ControllerBase
         var albumSlideIds = channel.CurrentAlbumId is int albumId
             ? _slideSource.GetSlides(albumId).Select(s => s.Id).ToArray()
             : null;
-        return Ok(await _viewStats.GetStatsAsync(id, albumSlideIds));
+        var stats = await _viewStats.GetStatsAsync(id, albumSlideIds);
+        return Ok(stats with { ChannelName = channel.Name, AlbumId = channel.CurrentAlbumId });
     }
 
     // Best-effort: the mutation has already been saved, so a broadcast failure must not turn

@@ -5,7 +5,20 @@ namespace SynologySlideshow.Api.Services;
 
 public record SlideViewStat(int SlideId, int ViewCount);
 
-public record ChannelStats(int TotalViews, SlideViewStat[] TopViewed, SlideViewStat[] LeastViewed, int NeverViewedCount = 0);
+// One bar of the views histogram: how many photos have been shown exactly ViewCount times.
+public record ViewCountBucket(int ViewCount, int PhotoCount);
+
+public record ChannelStats(
+    int TotalViews,
+    SlideViewStat[] TopViewed,
+    SlideViewStat[] LeastViewed,
+    int NeverViewedCount,
+    int PhotoCount,
+    ViewCountBucket[] Histogram)
+{
+    public string? ChannelName { get; init; }
+    public int? AlbumId { get; init; }
+}
 
 public class ViewStatsService
 {
@@ -14,6 +27,20 @@ public class ViewStatsService
     public ViewStatsService(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
+    }
+
+    private const int ListSize = 10;
+
+    // Dense from 0 to the highest count, so empty counts show up as empty bars instead of gaps.
+    private static ViewCountBucket[] BuildHistogram(List<SlideViewStat> ranked)
+    {
+        if (ranked.Count == 0) return Array.Empty<ViewCountBucket>();
+
+        var photosPerCount = ranked.GroupBy(v => v.ViewCount).ToDictionary(g => g.Key, g => g.Count());
+        var max = photosPerCount.Keys.Max();
+        return Enumerable.Range(0, max + 1)
+            .Select(count => new ViewCountBucket(count, photosPerCount.GetValueOrDefault(count)))
+            .ToArray();
     }
 
     public async Task RecordViewAsync(int channelId, int slideId)
@@ -60,9 +87,9 @@ public class ViewStatsService
             ranked.AddRange(neverViewed.Select(id => new SlideViewStat(id, 0)));
         }
 
-        var topViewed = ranked.OrderByDescending(v => v.ViewCount).Take(5).ToArray();
-        var leastViewed = ranked.OrderBy(v => v.ViewCount).Take(5).ToArray();
+        var topViewed = ranked.OrderByDescending(v => v.ViewCount).Take(ListSize).ToArray();
+        var leastViewed = ranked.OrderBy(v => v.ViewCount).Take(ListSize).ToArray();
 
-        return new ChannelStats(totalViews, topViewed, leastViewed, neverViewedCount);
+        return new ChannelStats(totalViews, topViewed, leastViewed, neverViewedCount, ranked.Count, BuildHistogram(ranked));
     }
 }

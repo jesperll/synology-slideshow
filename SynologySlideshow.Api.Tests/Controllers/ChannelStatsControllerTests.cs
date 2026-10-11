@@ -36,6 +36,9 @@ public class ChannelStatsControllerTests : IClassFixture<SlideshowApiFactory>
 
         Assert.Equal(3, stats!.TotalViews);
         Assert.Contains(stats.TopViewed, s => s.SlideId == 10 && s.ViewCount == 2);
+        Assert.Equal("stats-endpoint-test", stats.ChannelName);
+        Assert.Null(stats.AlbumId);
+        Assert.Equal(new[] { (0, 0), (1, 1), (2, 1) }, stats.Histogram.Select(b => (b.ViewCount, b.PhotoCount)));
     }
 
     [Fact]

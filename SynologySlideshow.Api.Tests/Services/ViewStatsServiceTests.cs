@@ -93,6 +93,54 @@ public class ViewStatsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task HistogramCountsHowManyPhotosHaveEachViewCountIncludingNone()
+    {
+        // photo 10: 3 views, 20: 1 view, 30: 1 view, 40: never shown, 50: never shown
+        foreach (var _ in Enumerable.Range(0, 3)) await _stats.RecordViewAsync(1, 10);
+        await _stats.RecordViewAsync(1, 20);
+        await _stats.RecordViewAsync(1, 30);
+
+        var stats = await _stats.GetStatsAsync(1, new[] { 10, 20, 30, 40, 50 });
+
+        Assert.Equal(5, stats.PhotoCount);
+        Assert.Equal(
+            new[] { (0, 2), (1, 2), (2, 0), (3, 1) },
+            stats.Histogram.Select(b => (b.ViewCount, b.PhotoCount)));
+    }
+
+    [Fact]
+    public async Task HistogramWithoutAKnownAlbumCoversOnlyPhotosThatWereShown()
+    {
+        await _stats.RecordViewAsync(1, 10);
+        await _stats.RecordViewAsync(1, 10);
+
+        var stats = await _stats.GetStatsAsync(1);
+
+        Assert.Equal(1, stats.PhotoCount);
+        Assert.Equal(new[] { (0, 0), (1, 0), (2, 1) }, stats.Histogram.Select(b => (b.ViewCount, b.PhotoCount)));
+    }
+
+    [Fact]
+    public async Task HistogramIsEmptyWhenThereAreNoPhotos()
+    {
+        var stats = await _stats.GetStatsAsync(1);
+
+        Assert.Empty(stats.Histogram);
+        Assert.Equal(0, stats.PhotoCount);
+    }
+
+    [Fact]
+    public async Task TopAndLeastViewedListUpToTenPhotos()
+    {
+        foreach (var slideId in Enumerable.Range(1, 15)) await _stats.RecordViewAsync(1, slideId);
+
+        var stats = await _stats.GetStatsAsync(1);
+
+        Assert.Equal(10, stats.TopViewed.Length);
+        Assert.Equal(10, stats.LeastViewed.Length);
+    }
+
+    [Fact]
     public async Task RankingsOnlyCoverThePhotosInTheGivenAlbum()
     {
         await _stats.RecordViewAsync(1, 10);
