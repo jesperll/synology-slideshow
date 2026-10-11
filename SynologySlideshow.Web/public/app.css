@@ -949,7 +949,7 @@ h1:focus {
 }
 
 .admin-channel-table th {
-    padding: 0.85rem 1rem;
+    padding: 0.85rem 0.6rem;
     text-align: left;
     font-size: 0.8rem;
     font-weight: 600;
@@ -960,7 +960,7 @@ h1:focus {
 }
 
 .admin-channel-table td {
-    padding: 0.85rem 1rem;
+    padding: 0.85rem 0.6rem;
     vertical-align: middle;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -1001,6 +1001,14 @@ h1:focus {
 .admin-channel-table select option {
     color: white;
     background-color: #222;
+}
+
+/* Below this width the nine columns don't fit with the controls on one row, so they wrap
+   onto two lines instead of pushing the table (and the Delete button) off-screen. */
+@media (min-width: 1300px) {
+    .admin-channel-table td[data-label="Controls"] {
+        white-space: nowrap;
+    }
 }
 
 .admin-channel-table button {
@@ -1089,10 +1097,15 @@ h1:focus {
     box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
 }
 
+/* A link that has to sit in a row of real buttons, so it copies the button box exactly: the
+   browser's default button font (Arial, not the page font) and the table's smaller padding. */
 .admin-channel-table td a.admin-link-button {
     display: inline-block;
-    padding: 0.65rem 1.25rem;
-    font-size: 0.95rem;
+    margin: 0.15rem;
+    padding: 0.4rem 0.8rem;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.85rem;
+    line-height: normal;
     color: white;
     background-color: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
