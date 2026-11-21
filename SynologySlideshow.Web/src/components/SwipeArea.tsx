@@ -9,14 +9,14 @@ interface SwipeAreaProps {
 }
 
 export function SwipeArea({ onSwipe, className, children }: SwipeAreaProps) {
-  const { handleTouchStart, handleTouchEnd, handleTouchCancel } = useSwipe({ onSwipe });
+  const { handlePointerDown, handlePointerUp, handlePointerCancel } = useSwipe({ onSwipe });
 
   return (
     <div
       className={className}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchCancel}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       style={{ touchAction: 'pan-y', overscrollBehavior: 'none' }}
     >
       {children}

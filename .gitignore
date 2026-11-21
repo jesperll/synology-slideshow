@@ -13,3 +13,5 @@ SynologySlideshow.Web/dist/
 .env
 
 docker-compose.yml
+
+/data/

@@ -9,18 +9,20 @@ export function useSwipe({ onSwipe }: SwipeHandlers) {
   const xDownRef = useRef<number | null>(null);
   const yDownRef = useRef<number | null>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    xDownRef.current = e.touches[0].clientX;
-    yDownRef.current = e.touches[0].clientY;
+  // Pointer events unify mouse, touch and pen input in one API, so dragging with
+  // a mouse on desktop triggers the same swipe detection as a touch gesture.
+  const handlePointerDown = (e: React.PointerEvent) => {
+    xDownRef.current = e.clientX;
+    yDownRef.current = e.clientY;
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     if (xDownRef.current === null || yDownRef.current === null) {
       return;
     }
 
-    const xDiff = xDownRef.current - e.changedTouches[0].clientX;
-    const yDiff = yDownRef.current - e.changedTouches[0].clientY;
+    const xDiff = xDownRef.current - e.clientX;
+    const yDiff = yDownRef.current - e.clientY;
 
     if (Math.abs(xDiff) < 100 && Math.abs(yDiff) < 100) {
       xDownRef.current = null;
@@ -46,10 +48,10 @@ export function useSwipe({ onSwipe }: SwipeHandlers) {
     yDownRef.current = null;
   };
 
-  const handleTouchCancel = () => {
+  const handlePointerCancel = () => {
     xDownRef.current = null;
     yDownRef.current = null;
   };
 
-  return { handleTouchStart, handleTouchEnd, handleTouchCancel };
+  return { handlePointerDown, handlePointerUp, handlePointerCancel };
 }
